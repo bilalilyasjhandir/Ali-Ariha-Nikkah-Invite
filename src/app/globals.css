@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  /* pulled directly from the couple's nikkah certificate */
+  --color-paper: #e6e2dc;
+  --color-paper-card: #f4f0e9;
+  --color-ink: #524438;
+  --color-ink-soft: #8a7b6b;
+  --color-petal-light: #cfe9f2;
+  --color-petal-mid: #6fb3c9;
+  --color-petal-deep: #1f212b;
+  --color-silver: #9aa0a6;
+  --color-silver-soft: #c9cdd1;
+}
+
+@theme inline {
+  --color-paper: var(--color-paper);
+  --color-paper-card: var(--color-paper-card);
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-petal-light: var(--color-petal-light);
+  --color-petal-mid: var(--color-petal-mid);
+  --color-petal-deep: var(--color-petal-deep);
+  --color-silver: var(--color-silver);
+  --color-silver-soft: var(--color-silver-soft);
+
+  --font-serif: var(--font-serif);
+  --font-script: var(--font-script);
+  --font-sans: var(--font-sans);
+  --font-arabic: var(--font-arabic);
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(0.6deg);
+  }
+}
+
+@keyframes pulse-invite {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(3px);
+  }
+}
+
