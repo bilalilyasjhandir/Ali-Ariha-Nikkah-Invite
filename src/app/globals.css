@@ -6,6 +6,8 @@
   --color-paper-card: #f4f0e9;
   --color-ink: #524438;
   --color-ink-soft: #8a7b6b;
+  /* secondary text that still clears 4.5:1 on the card */
+  --color-ink-mid: #6a5b4d;
   --color-petal-light: #cfe9f2;
   --color-petal-mid: #6fb3c9;
   --color-petal-deep: #1f212b;
@@ -18,6 +20,7 @@
   --color-paper-card: var(--color-paper-card);
   --color-ink: var(--color-ink);
   --color-ink-soft: var(--color-ink-soft);
+  --color-ink-mid: var(--color-ink-mid);
   --color-petal-light: var(--color-petal-light);
   --color-petal-mid: var(--color-petal-mid);
   --color-petal-deep: var(--color-petal-deep);
@@ -31,30 +34,102 @@
 }
 
 body {
-  background: var(--color-paper);
+  /* the linen's mid-tone, so nothing pale ever shows behind the scene */
+  background: #bfc9ce;
   color: var(--color-ink);
   font-family: var(--font-serif);
 }
 
-@keyframes sway {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-7px) rotate(0.6deg);
+/* One sizing system for the whole opening: the envelope fills a phone the way
+   a real tea-length envelope fills a hand, and never outgrows a laptop screen.
+   The reading card size is shared by the animated card and the static one. */
+.invite-vars {
+  --eh: min(82svh, calc(88vw * 1.8));
+  --ew: calc(var(--eh) / 1.8);
+  /* sized by height so it fits a phone, but never narrower than a comfortable
+     reading width — on a short laptop or a phone held sideways the card
+     outgrows the screen and the page scrolls instead of the text shrinking */
+  --card-w: max(calc(min(90svh, calc(92vw * 1.818)) / 1.818), min(92vw, 460px));
+  /* blossom clusters: tucked under the envelope's corners on a phone, out in
+     the open table on a laptop */
+  --side: clamp(0px, calc((100vw - var(--ew)) * 0.26), 280px);
+  --cluster: min(calc(var(--ew) * 0.8), 380px);
+}
+
+@media (min-width: 1200px) {
+  .invite-vars {
+    --eh: min(86svh, calc(88vw * 1.8));
   }
 }
 
-@keyframes pulse-invite {
+@keyframes foil-sheen {
   0%,
   100% {
-    opacity: 0.55;
-    transform: translateY(0);
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes seal-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+@keyframes seal-glow-breathe {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.32;
+  }
+}
+
+@keyframes hint-line {
+  0%,
+  100% {
+    transform: scaleX(0.35);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes curtain-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.97);
   }
   50% {
     opacity: 1;
-    transform: translateY(3px);
+    transform: scale(1);
   }
 }
 
+/* while the envelope moves: freeze the foil shimmer (a repainting background
+   animation) and stop the seal breathing */
+[data-opening] [class*="foil-sheen"] {
+  animation-play-state: paused;
+}
+[data-opening] .seal-breathe,
+[data-opening] .seal-glow-breathe {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

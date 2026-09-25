@@ -1,5 +1,5 @@
-import { EnvelopeExperience } from "@/components/envelope/EnvelopeExperience";
+import { Invitation } from "@/components/Invitation";
 
 export default function Home() {
-  return <EnvelopeExperience />;
+  return <Invitation />;
 }
