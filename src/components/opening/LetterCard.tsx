@@ -13,44 +13,43 @@ export function LetterCard({ lift, onPaperLoad }: { lift?: MotionValue<number>; 
       {/* Nothing above the Bismillah; the monogram signs off at the foot. Each
           parent line sits under its own name. */}
       <div className="absolute inset-[7.8cqw] flex flex-col items-center justify-center text-center px-[1.5cqw] [text-wrap:balance]">
-        <p className="font-arabic text-[6.4cqw] leading-[1.5] text-ink" style={PRESS}>
+        {/* a quiet opening line, so the names carry the card */}
+        <p className="font-arabic text-[5.6cqw] leading-[1.5] text-ink" style={PRESS}>
           بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
         </p>
-        <p className="mt-[0.6cqw] font-arabic text-[5.2cqw] leading-[1.5] text-ink" style={PRESS}>
-          وَخَلَقْنَاكُمْ أَزْوَاجًا
-        </p>
-        <p className="mt-[0.8cqw] font-sans text-[3.5cqw] tracking-[0.14em] uppercase text-ink-mid">
+        <p className="mt-[0.2cqw] font-arabic text-[4.4cqw] leading-[1.5] text-ink-mid">وَخَلَقْنَاكُمْ أَزْوَاجًا</p>
+        <p className="mt-[0.6cqw] font-sans text-[2.7cqw] tracking-[0.2em] uppercase text-ink-mid">
           And We created you in pairs
         </p>
 
-        <div className="my-[5cqw]">
-          <FoilRule />
+        <div className="my-[4.5cqw]">
+          <FoilRule width="10cqw" />
         </div>
 
-        <p className="font-sans text-[3.5cqw] tracking-[0.14em] uppercase text-ink-mid">Together with their families</p>
+        <p className="font-sans text-[2.7cqw] tracking-[0.2em] uppercase text-ink-mid">Together with their families</p>
 
-        <p className="mt-[3.5cqw] font-script text-[11.5cqw] leading-[1.2] text-ink" style={PRESS}>
+        <p className="mt-[4.5cqw] font-script text-[13.2cqw] leading-[1.15] text-ink" style={PRESS}>
           {groom.name}
         </p>
-        <p className="font-serif font-medium text-[4.6cqw] leading-[1.35] text-ink/85">{groom.parents}</p>
+        <p className="mt-[0.4cqw] font-serif text-[4.2cqw] leading-[1.35] text-ink-mid">{groom.parents}</p>
 
-        <div className="my-[2.2cqw]">
-          <FoilAmpersand />
+        <div className="my-[2.6cqw]">
+          <FoilAmpersand className="text-[9.5cqw]" />
         </div>
 
-        <p className="font-script text-[11.5cqw] leading-[1.2] text-ink" style={PRESS}>
+        <p className="font-script text-[13.2cqw] leading-[1.15] text-ink" style={PRESS}>
           {bride.name}
         </p>
-        <p className="font-serif font-medium text-[4.6cqw] leading-[1.35] text-ink/85">{bride.parents}</p>
+        <p className="mt-[0.4cqw] font-serif text-[4.2cqw] leading-[1.35] text-ink-mid">{bride.parents}</p>
 
-        <p className="mt-[5.5cqw] font-serif italic text-[4.7cqw] leading-[1.35] text-ink" style={PRESS}>
+        <p className="mt-[6cqw] font-serif italic text-[4.4cqw] leading-[1.4] text-ink" style={PRESS}>
           joyfully invite you
           <br />
           to celebrate their Nikkah
         </p>
 
-        <div className="mt-[5.5cqw]">
-          <FoilMonogram />
+        <div className="mt-[5cqw]">
+          <FoilMonogram className="w-[6.5cqw]" />
         </div>
       </div>
     </Paper>
