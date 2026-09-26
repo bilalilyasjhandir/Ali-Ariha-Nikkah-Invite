@@ -92,17 +92,37 @@ misread), **Jost** (small caps), **Amiri** (Arabic).
 `design/` holds the couple's original flower and monogram art (not served).
 `Ali & Ariha.pdf` is the certificate the palette and the damask come from.
 
-## What's built so far
+## After the opening: the sections
 
-- [x] Envelope opening → the card with Bismillah, ayah and names
-      (`src/components/opening/`, `src/components/Invitation.tsx`)
-- [ ] Scratch card (reveals the date)
-- [ ] Countdown
-- [ ] Event-day timeline
-- [ ] Venue + Google Maps
-- [ ] Gift note ("no boxed gifts")
-- [ ] RSVP form (name, attending yes/no, guest count, optional blessing)
-- [ ] `/admin` — password-gated RSVP list with delete
+Eight full-screen sections, one card each, in a native CSS scroll-snap
+container (`src/components/sections/Sections.tsx`): one swipe or one key press
+moves one section. A mouse wheel tick or trackpad flick is turned into exactly
+one step by a small wheel handler (natively it would snap back). Section dots
+sit on the right on laptops.
+
+1. Invitation (the card from the envelope)
+2. Save the date — scratch card that reveals the date
+3. Countdown, with add-to-calendar
+4. The day's schedule
+5. Venue, with the Google Maps location
+6. A gentle request (no boxed gifts)
+7. RSVP
+8. Closing note
+
+Every card is the same photoreal cotton card (`src/components/paper/Paper.tsx`)
+with content laid out in `cqw` so it scales with the card. **All wording and
+event facts live in `src/lib/event.ts`** — edit text there.
+
+A link ending in a section id (e.g. `…/#rsvp`) skips the envelope and opens
+straight on that section.
+
+## RSVPs and /admin
+
+RSVPs are stored by `src/lib/rsvp-store.ts`: in an **Upstash Redis** database
+on Vercel, or in `.data/rsvps.json` when running locally without one.
+`/admin` shows every RSVP and lets you delete them; it is protected by the
+`ADMIN_PASSWORD` environment variable (locally in `.env.local`, which is not
+committed).
 
 ## Getting started
 
@@ -117,14 +137,20 @@ Open http://localhost:3000.
 
 - Ali Asghar, son of Mr. & Mrs. Nadeem Asghar
 - Ariha Maryam, daughter of Mr. & Mrs. Muhammad Akram
-- Wednesday, 28 October 2026
-- The Emerald Bradford, BD3 9RY
+- Wednesday, 28 October 2026, 12:00 PM (GMT — the UK clocks change on 25 Oct)
+- The Emerald Bradford, 3 Tickhill St, Bradford BD3 9RY
 - 12:00 Guest arrival · 12:30 Nikkah · 13:00 Lunch
 
-## Env vars (once RSVP storage + admin are built)
+## Deploying to Vercel
 
-See `.env.example`. `ADMIN_PASSWORD` gates `/admin`.
-
-## Deploying
-
-Push to GitHub, import into Vercel. No env vars are needed yet.
+1. Push the repo to GitHub and import it into Vercel (framework: Next.js, no
+   build settings to change).
+2. **RSVP database:** in the Vercel project, open **Storage → Create
+   Database → Upstash for Redis** (free tier is plenty) and connect it to the
+   project. That adds the `KV_REST_API_URL` / `KV_REST_API_TOKEN` variables
+   automatically. Without it, the RSVP form shows a polite "not open yet"
+   message instead of saving.
+3. **Admin password:** in **Settings → Environment Variables** add
+   `ADMIN_PASSWORD` with the password for `/admin`.
+4. Redeploy so the new variables are picked up. Then send a test RSVP and
+   check it appears at `/admin`.

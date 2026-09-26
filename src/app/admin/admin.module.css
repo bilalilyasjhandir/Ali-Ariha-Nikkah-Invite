@@ -1,0 +1,56 @@
+/* ivory cotton: the card colour with a faint, static fibre grain */
+.paper {
+  background-color: var(--color-paper-card);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.32 0 0 0 0 0.27 0 0 0 0 0.22 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Guests write in English, Urdu and Arabic: Cormorant has no Arabic letters,
+   so they fall through to Amiri, upright (Amiri has no italic to slant). */
+.guestText {
+  font-family: "Cormorant Garamond", "Amiri", var(--font-serif), serif;
+  font-synthesis-style: none;
+}
+
+/* One reply. A card on a phone; a table row from 1024px up, with the time
+   received tucked under the name. */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name reply"
+    "guests time"
+    "blessing blessing"
+    "action action";
+  column-gap: 16px;
+}
+.name {
+  grid-area: name;
+}
+.reply {
+  grid-area: reply;
+}
+.guests {
+  grid-area: guests;
+}
+.blessing {
+  grid-area: blessing;
+}
+.time {
+  grid-area: time;
+}
+.action {
+  grid-area: action;
+}
+
+@media (min-width: 1024px) {
+  .row,
+  .head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) 8.5rem 4.5rem minmax(0, 2fr) 8.5rem;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "name reply guests blessing action"
+      "time reply guests blessing action";
+    column-gap: 28px;
+  }
+}

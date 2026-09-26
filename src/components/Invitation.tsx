@@ -1,10 +1,23 @@
 "use client";
 
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useMotionValue } from "framer-motion";
+import { SECTION_IDS, type SectionId } from "@/lib/event";
 import { Scene } from "./opening/Scene";
 import { OpeningScene } from "./opening/OpeningScene";
-import { LetterCard } from "./opening/LetterCard";
+import { Sections } from "./sections/Sections";
+
+// A link straight to a section (…/#rsvp) skips the envelope.
+const noop = () => () => {};
+const useDeepLink = () =>
+  useSyncExternalStore(
+    noop,
+    () => {
+      const id = window.location.hash.slice(1) as SectionId;
+      return SECTION_IDS.includes(id) ? id : null;
+    },
+    () => null,
+  );
 
 export function Invitation() {
   // One camera for the whole opening. The envelope and the blossoms lie on the
@@ -15,6 +28,7 @@ export function Invitation() {
   const camLift = useMotionValue(0);
   const envH = useMotionValue(0);
   const [opened, setOpened] = useState(false);
+  const deepLink = useDeepLink();
 
   const probe = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -29,19 +43,10 @@ export function Invitation() {
       <div ref={probe} aria-hidden className="fixed invisible pointer-events-none" style={{ height: "var(--eh)" }} />
       <Scene cam={cam} lift={camLift} />
 
-      {!opened ? (
-        <OpeningScene cam={cam} camLift={camLift} envH={envH} onOpened={() => startTransition(() => setOpened(true))} />
+      {opened || deepLink ? (
+        <Sections startAt={deepLink ?? undefined} />
       ) : (
-        <main className="relative z-10">
-          {/* Same size and position as the card at the end of the opening, so the
-              swap is invisible: centred when it fits, otherwise top-anchored and
-              the page scrolls. */}
-          <section className="min-h-dvh flex items-center justify-center py-6">
-            <div style={{ width: "var(--card-w)" }}>
-              <LetterCard />
-            </div>
-          </section>
-        </main>
+        <OpeningScene cam={cam} camLift={camLift} envH={envH} onOpened={() => startTransition(() => setOpened(true))} />
       )}
     </div>
   );

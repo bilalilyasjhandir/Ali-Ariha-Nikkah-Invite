@@ -46,10 +46,10 @@ body {
 .invite-vars {
   --eh: min(82svh, calc(88vw * 1.8));
   --ew: calc(var(--eh) / 1.8);
-  /* sized by height so it fits a phone, but never narrower than a comfortable
-     reading width — on a short laptop or a phone held sideways the card
-     outgrows the screen and the page scrolls instead of the text shrinking */
-  --card-w: max(calc(min(90svh, calc(92vw * 1.818)) / 1.818), min(92vw, 460px));
+  /* sized so one card fits one screen (each section is one screen), but
+     never narrower than 300px — on a phone held sideways the card outgrows
+     the screen and that section scrolls rather than the text shrinking */
+  --card-w: max(calc(min(90svh, calc(92vw * 1.818)) / 1.818), min(92vw, 300px));
   /* blossom clusters: tucked under the envelope's corners on a phone, out in
      the open table on a laptop */
   --side: clamp(0px, calc((100vw - var(--ew)) * 0.26), 280px);
@@ -101,6 +101,28 @@ body {
   50% {
     transform: scaleX(1);
     opacity: 1;
+  }
+}
+
+@keyframes scroll-cue {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  40% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1) translateY(10px);
+    opacity: 0;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
