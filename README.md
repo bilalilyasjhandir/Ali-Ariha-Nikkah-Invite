@@ -116,6 +116,21 @@ event facts live in `src/lib/event.ts`** — edit text there.
 A link ending in a section id (e.g. `…/#rsvp`) skips the envelope and opens
 straight on that section.
 
+## Background music
+
+`public/audio/nikkah-song.mp3` (the original is `design/song.mp3`). The web
+version is 128 kbps with a 1.5 s fade-in and a 4 s fade-out baked in, so the
+loop breathes instead of cutting — iOS ignores volume changes from script, so
+fades can't live in code. The seal tap unlocks audio silently (phones only
+allow sound inside a tap); the song starts as the flap swings open.
+`src/components/music/` holds the player and the corner play/pause button.
+It pauses while the guest is in another app, and never autoplays when a link
+skips the envelope. To change the song: re-encode it the same way, e.g.
+
+```bash
+ffmpeg -i new-song.mp3 -vn -map_metadata -1 -af "afade=t=in:st=0:d=1.5,afade=t=out:st=<length-4>:d=4" -b:a 128k public/audio/nikkah-song.mp3
+```
+
 ## RSVPs and /admin
 
 RSVPs are stored by `src/lib/rsvp-store.ts`: in an **Upstash Redis** database

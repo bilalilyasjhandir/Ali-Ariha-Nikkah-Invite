@@ -29,6 +29,7 @@ import {
   SIZE,
 } from "./geometry";
 import { LetterCard } from "./LetterCard";
+import { music } from "../music/music";
 import { CrackLight, SealBloom, SealCrumbs, SealLight, SealPiece, SealSheen, SealWhole, WARM } from "./WaxSeal";
 
 // open-flap shadow, interior, pocket, flap shadow, flap front, flap back,
@@ -251,7 +252,9 @@ export function OpeningScene({
 
   const intro = useMotionValue(0);
   useEffect(() => {
-    if (ready) animate(intro, 1, { duration: 1.6, ease: [0.22, 0, 0.1, 1], delay: 0.2 });
+    if (!ready) return;
+    animate(intro, 1, { duration: 1.6, ease: [0.22, 0, 0.1, 1], delay: 0.2 });
+    music.preload();
   }, [ready, intro]);
   const introScale = useTransform(intro, [0, 1], [1.035, 1]);
 
@@ -358,8 +361,11 @@ export function OpeningScene({
     tiltX.set(0);
     tiltY.set(0);
     navigator.vibrate?.(8);
+    // must run inside the tap itself, before anything is awaited
+    music.prime();
 
     if (reduce) {
+      music.start();
       await animate(stageFade, 0, { duration: 0.5 });
       onOpened();
       return;
@@ -385,6 +391,8 @@ export function OpeningScene({
     const gone = (vh / 2 + 40) / CAM_END + (1 + OPEN_FLAP_REACH) * eh;
 
     window.setTimeout(() => navigator.vibrate?.(14), 1000);
+    // the song begins as the flap swings open
+    window.setTimeout(() => music.start(), 1300);
 
     await animate([
       // Beat 1 — the seal alone. It gives under the thumb, a line of light
