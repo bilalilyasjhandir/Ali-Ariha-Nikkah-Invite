@@ -55,8 +55,8 @@ function Thanks({ reply, onAnother }: { reply: Reply; onAnother: () => void }) {
   }, []);
 
   const rise = (delay: number) => ({
-    initial: { opacity: 0, y: reduce ? 0 : 10 },
-    whileInView: { opacity: 1, y: 0 },
+    initial: { opacity: 0, transform: `translateY(${reduce ? 0 : 10}px)` },
+    whileInView: { opacity: 1, transform: "translateY(0px)" },
     viewport: { once: true, amount: 0.4 },
     transition: { duration: 0.8, delay, ease: EASE },
   });
@@ -65,8 +65,8 @@ function Thanks({ reply, onAnother }: { reply: Reply; onAnother: () => void }) {
     <div className="absolute inset-[9.5cqw] flex flex-col items-center justify-center text-center [-webkit-tap-highlight-color:transparent]">
       {/* the monogram is pressed into the card, like a seal */}
       <motion.div
-        initial={{ opacity: 0, scale: reduce ? 1 : 1.18 }}
-        whileInView={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, transform: `scale(${reduce ? 1 : 1.18})` }}
+        whileInView={{ opacity: 1, transform: "scale(1)" }}
         viewport={{ once: true, amount: 0.4 }}
         transition={{ duration: 1, delay: 0.15, ease: EASE }}
       >
@@ -97,8 +97,8 @@ function Thanks({ reply, onAnother }: { reply: Reply; onAnother: () => void }) {
 
       <motion.div
         className="mt-[7cqw]"
-        initial={{ opacity: 0, scaleX: reduce ? 1 : 0.3 }}
-        whileInView={{ opacity: 1, scaleX: 1 }}
+        initial={{ opacity: 0, transform: `scaleX(${reduce ? 1 : 0.3})` }}
+        whileInView={{ opacity: 1, transform: "scaleX(1)" }}
         viewport={{ once: true, amount: 0.4 }}
         transition={{ duration: 1.1, delay: 0.95, ease: EASE }}
       >

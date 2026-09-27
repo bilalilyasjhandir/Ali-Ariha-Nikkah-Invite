@@ -147,9 +147,17 @@ body {
   }
 }
 
+/* the foil shimmer is a repainting background animation: it runs only on a
+   card in view and holds still while the page scrolls (Sections sets these).
+   Keyed on a plain class, so toggling them restyles only the foil. */
+[data-offscreen] .sheen,
+[data-scrolling] .sheen {
+  animation-play-state: paused;
+}
+
 /* while the envelope moves: freeze the foil shimmer (a repainting background
    animation) and stop the seal breathing */
-[data-opening] [class*="foil-sheen"] {
+[data-opening] .sheen {
   animation-play-state: paused;
 }
 [data-opening] .seal-breathe,

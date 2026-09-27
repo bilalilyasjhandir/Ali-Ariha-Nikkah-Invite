@@ -28,6 +28,9 @@ export const BLOOMS = {
 
 // A soft shadow cut to the deckle edge. The blur sits on a wrapper so it
 // softens the masked shape instead of being clipped by it. Static filters only.
+// Only the rising card's shadows fade, so only they get a layer of their own;
+// the rest are painted with the card (a layer per shadow on every card would
+// weigh on a phone's graphics memory for nothing).
 function PaperShadow({
   x,
   y,
@@ -45,7 +48,7 @@ function PaperShadow({
     <motion.div
       aria-hidden
       className="absolute inset-0"
-      style={{ opacity, transform: `translate(${x}, ${y})`, filter: `blur(${blur})`, willChange: "opacity" }}
+      style={{ opacity, transform: `translate(${x}, ${y})`, filter: `blur(${blur})`, willChange: opacity ? "opacity" : undefined }}
     >
       <div className="absolute inset-0" style={{ background: `rgba(30,38,46,${alpha})`, ...maskOf(IMG.cardMask, "100% 100%") }} />
     </motion.div>
@@ -80,8 +83,8 @@ export function Paper({
       style={{ aspectRatio: `${SIZE.card.w} / ${SIZE.card.h}`, containerType: "inline-size" }}
     >
       {lift && <PaperShadow x="1.8cqw" y="5cqw" blur="5.5cqw" alpha={0.28} opacity={lifted} />}
-      <PaperShadow x="0.7cqw" y="1.6cqw" blur="2.2cqw" alpha={0.26} opacity={resting} />
-      <PaperShadow x="0.2cqw" y="0.45cqw" blur="0.5cqw" alpha={0.2} opacity={resting} />
+      <PaperShadow x="0.7cqw" y="1.6cqw" blur="2.2cqw" alpha={0.26} opacity={lift && resting} />
+      <PaperShadow x="0.2cqw" y="0.45cqw" blur="0.5cqw" alpha={0.2} opacity={lift && resting} />
 
       <div className="absolute inset-0 overflow-hidden" style={maskOf(IMG.cardMask, "100% 100%")}>
         <Image

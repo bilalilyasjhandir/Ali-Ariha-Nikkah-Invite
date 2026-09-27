@@ -37,7 +37,7 @@ const foilClip: CSSProperties = {
 export function FoilText({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <span className="inline-block" style={{ filter: FOIL_EDGE }}>
-      <span className={`inline-block animate-[foil-sheen_7s_ease-in-out_infinite] ${className}`} style={foilClip}>
+      <span className={`inline-block sheen animate-[foil-sheen_7s_ease-in-out_infinite] ${className}`} style={foilClip}>
         {children}
       </span>
     </span>
@@ -48,7 +48,7 @@ export function FoilMonogram({ className = "w-[7.5cqw]" }: { className?: string 
   return (
     <div className={className} style={{ filter: FOIL_EDGE }}>
       <div
-        className="animate-[foil-sheen_7s_ease-in-out_infinite]"
+        className="sheen animate-[foil-sheen_7s_ease-in-out_infinite]"
         style={{
           aspectRatio: `${SIZE.monogram.w} / ${SIZE.monogram.h}`,
           background: FOIL,
@@ -64,9 +64,9 @@ export function FoilRule({ width = "13cqw" }: { width?: string }) {
   const line: CSSProperties = { background: FOIL, backgroundSize: "300% 100%" };
   return (
     <div className="flex items-center gap-[2.2cqw]" style={{ filter: "drop-shadow(0 0.5px 0 rgba(255,255,255,0.7))" }}>
-      <span className="h-px animate-[foil-sheen_7s_ease-in-out_infinite]" style={{ ...line, width }} />
-      <span className="size-[1.5cqw] rotate-45 animate-[foil-sheen_7s_ease-in-out_infinite]" style={line} />
-      <span className="h-px animate-[foil-sheen_7s_ease-in-out_infinite]" style={{ ...line, width }} />
+      <span className="h-px sheen animate-[foil-sheen_7s_ease-in-out_infinite]" style={{ ...line, width }} />
+      <span className="size-[1.5cqw] rotate-45 sheen animate-[foil-sheen_7s_ease-in-out_infinite]" style={line} />
+      <span className="h-px sheen animate-[foil-sheen_7s_ease-in-out_infinite]" style={{ ...line, width }} />
     </div>
   );
 }

@@ -45,7 +45,7 @@ export function VenueMap() {
     <div className="relative mx-auto" style={{ width: `${W + MAT * 2}cqw`, padding: `${MAT}cqw` }}>
       <div
         aria-hidden
-        className="absolute inset-0 animate-[foil-sheen_7s_ease-in-out_infinite]"
+        className="absolute inset-0 sheen animate-[foil-sheen_7s_ease-in-out_infinite]"
         style={{ ...ring, filter: "drop-shadow(0 0.5px 0 rgba(255,255,255,0.7))" }}
       />
 

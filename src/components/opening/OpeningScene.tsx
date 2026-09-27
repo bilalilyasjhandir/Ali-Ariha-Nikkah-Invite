@@ -171,7 +171,7 @@ function EnvelopeNames({ y }: { y: MotionValue<number> }) {
     >
       <div style={{ filter: FOIL_EDGE }}>
         <p
-          className="font-sans uppercase tracking-[0.34em] animate-[foil-sheen_8s_ease-in-out_infinite]"
+          className="font-sans uppercase tracking-[0.34em] sheen animate-[foil-sheen_8s_ease-in-out_infinite]"
           style={{ ...FOIL_TEXT, fontSize: "max(12px, calc(var(--ew) * 0.034))" }}
         >
           The Nikkah of
@@ -179,7 +179,7 @@ function EnvelopeNames({ y }: { y: MotionValue<number> }) {
       </div>
       <div className="mt-[calc(var(--ew)*0.02)]" style={{ filter: FOIL_EDGE }}>
         <p
-          className="font-script leading-[1.25] whitespace-nowrap animate-[foil-sheen_8s_ease-in-out_infinite]"
+          className="font-script leading-[1.25] whitespace-nowrap sheen animate-[foil-sheen_8s_ease-in-out_infinite]"
           style={{ ...FOIL_TEXT, fontSize: "calc(var(--ew) * 0.118)" }}
         >
           Ali <span className="font-serif italic text-[0.78em]">&amp;</span> Ariha

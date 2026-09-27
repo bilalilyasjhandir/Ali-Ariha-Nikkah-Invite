@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, MotionConfig, motion, useInView } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion, useInView, useReducedMotion } from "framer-motion";
 import { useRef, useSyncExternalStore } from "react";
 import { EVENT } from "@/lib/event";
 import { BLOOMS, Paper } from "../paper/Paper";
@@ -72,10 +72,14 @@ function split(remaining: number) {
 
 // One figure, in a window cut to the height of the lining figures. Keyed by
 // its value, so only a figure that changes rolls: the old one drops out of the
-// window as the new one rolls in from above, the way an odometer turns.
+// window as the new one rolls in from above, the way an odometer turns. The
+// roll is a transform string so it runs on the compositor, not the page;
+// MotionConfig can't still a transform string, so reduced motion is handled
+// here: the figures simply cross-fade.
 const WINDOW = "linear-gradient(to bottom, transparent 0.04em, #000 0.16em, #000 0.86em, transparent 0.98em)";
 
 function Digit({ d }: { d: string }) {
+  const roll = useReducedMotion() ? 0 : 72;
   return (
     <span className="relative block overflow-hidden" style={{ maskImage: WINDOW, WebkitMaskImage: WINDOW }}>
       <span className="invisible">0</span>
@@ -83,9 +87,9 @@ function Digit({ d }: { d: string }) {
         <motion.span
           key={d}
           className="absolute inset-0 text-center"
-          initial={{ y: "-72%", opacity: 0 }}
-          animate={{ y: "0%", opacity: 1 }}
-          exit={{ y: "72%", opacity: 0 }}
+          initial={{ transform: `translateY(${-roll}%)`, opacity: 0 }}
+          animate={{ transform: "translateY(0%)", opacity: 1 }}
+          exit={{ transform: `translateY(${roll}%)`, opacity: 0 }}
           transition={{ duration: 0.65, ease: EASE }}
         >
           {d}

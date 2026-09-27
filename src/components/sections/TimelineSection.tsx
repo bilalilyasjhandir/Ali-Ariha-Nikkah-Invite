@@ -14,28 +14,27 @@ const FOIL_DOWN = "linear-gradient(180deg, #8c959e, #b9c0c6 24%, #79828b 50%, #a
 
 // A silver thread hangs from the title and draws down the card: it reaches
 // each item's node, the node lands, the item rises under it, and the thread
-// carries on to the next.
+// carries on to the next. All transform strings, so it runs on the compositor.
 const BASE = 0.45;
 const STEP = 0.78;
 const DRAW = 0.5;
 const at = (i: number) => BASE + i * STEP;
 
 const draw: Variants = {
-  hidden: { scaleY: 0 },
-  shown: (i: number) => ({ scaleY: 1, transition: { duration: DRAW, ease: [0.45, 0, 0.35, 1], delay: at(i) } }),
+  hidden: { transform: "scaleY(0)" },
+  shown: (i: number) => ({ transform: "scaleY(1)", transition: { duration: DRAW, ease: [0.45, 0, 0.35, 1], delay: at(i) } }),
 };
 const land: Variants = {
-  hidden: { opacity: 0, scale: 0.2, rotate: 45 },
+  hidden: { opacity: 0, transform: "rotate(45deg) scale(0.2)" },
   shown: (i: number) => ({
     opacity: 1,
-    scale: 1,
-    rotate: 45,
+    transform: "rotate(45deg) scale(1)",
     transition: { duration: 0.45, ease: EASE, delay: at(i) + DRAW - 0.06 },
   }),
 };
 const rise: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  shown: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.75, ease: EASE, delay: at(i) + DRAW } }),
+  hidden: { opacity: 0, transform: "translateY(10px)" },
+  shown: (i: number) => ({ opacity: 1, transform: "translateY(0px)", transition: { duration: 0.75, ease: EASE, delay: at(i) + DRAW } }),
 };
 
 function Timeline() {
@@ -44,7 +43,7 @@ function Timeline() {
   return (
     <motion.ol
       className="flex w-full flex-col items-center"
-      initial={still ? false : "hidden"}
+      initial={still ? "shown" : "hidden"}
       whileInView="shown"
       viewport={{ once: true, amount: 0.35 }}
     >

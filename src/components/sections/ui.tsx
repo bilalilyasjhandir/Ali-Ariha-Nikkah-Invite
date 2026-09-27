@@ -53,13 +53,14 @@ export function PaperLink({ className = "", children, ...rest }: ComponentProps<
 }
 
 // Content rises in, line by line, the first time a card settles into view.
+// Transform strings (not y) keep it on the compositor, like the card itself.
 const group: Variants = {
   hidden: {},
   shown: { transition: { staggerChildren: 0.09, delayChildren: 0.25 } },
 };
 const item: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  shown: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 0, 0.1, 1] } },
+  hidden: { opacity: 0, transform: "translateY(12px)" },
+  shown: { opacity: 1, transform: "translateY(0px)", transition: { duration: 0.7, ease: [0.22, 0, 0.1, 1] } },
 };
 const itemStill: Variants = {
   hidden: { opacity: 0 },

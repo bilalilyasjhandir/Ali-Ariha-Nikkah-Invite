@@ -8,7 +8,8 @@ import { IMG } from "../opening/geometry";
 // few glints and, now and then, one of the couple's watercolour blossoms.
 // One canvas above everything that never takes a tap. Sprites are drawn once
 // up front; the frame loop runs only while something is still fading and stops
-// the moment the screen is clear, so an idle page costs nothing.
+// the moment the screen is clear, so an idle page costs nothing. Each frame
+// clears and draws only the patch the light covers, not the whole screen.
 
 const GLOW = 0;
 const GLINT = 1;
@@ -55,15 +56,14 @@ export function PointerTrail() {
     if (reduce) return;
     const canvas = ref.current!;
     const ctx = canvas.getContext("2d")!;
-    let w = 0;
-    let h = 0;
+    let dpr = 1;
+    // the patch drawn last frame (CSS px), which is all the next frame clears
+    let dirty: [number, number, number, number] | null = null;
     const resize = () => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      w = window.innerWidth;
-      h = window.innerHeight;
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.round(window.innerWidth * dpr);
+      canvas.height = Math.round(window.innerHeight * dpr);
+      dirty = null;
     };
     resize();
     window.addEventListener("resize", resize);
@@ -116,17 +116,39 @@ export function PointerTrail() {
     let last = 0;
 
     const tick = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
+      const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
       last = now;
-      ctx.clearRect(0, 0, w, h);
+      settleTail(now);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (dirty) ctx.clearRect(dirty[0], dirty[1], dirty[2] - dirty[0], dirty[3] - dirty[1]);
+      // age everything and drop what has faded, keeping the order
+      let n = 0;
+      for (const p of ps) {
+        p.age += dt;
+        if (p.age < p.life) ps[n++] = p;
+      }
+      ps.length = n;
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      const cover = (x: number, y: number, r: number) => {
+        x0 = Math.min(x0, x - r);
+        y0 = Math.min(y0, y - r);
+        x1 = Math.max(x1, x + r);
+        y1 = Math.max(y1, y + r);
+      };
+      // a sprite turned about its centre, without a save/restore per sprite
+      const turned = (img: CanvasImageSource, x: number, y: number, rot: number, size: number) => {
+        const c = Math.cos(rot) * dpr;
+        const sn = Math.sin(rot) * dpr;
+        ctx.setTransform(c, sn, -sn, c, x * dpr, y * dpr);
+        ctx.drawImage(img, -size / 2, -size / 2, size, size);
+        cover(x, y, size * 0.71);
+      };
       for (let i = ps.length - 1; i >= 0; i--) {
         const p = ps[i];
-        p.age += dt;
         const t = p.age / p.life;
-        if (t >= 1) {
-          ps.splice(i, 1);
-          continue;
-        }
         if (p.kind === PETAL) {
           // flutter down: a little gravity, a sideways sway, a slow turn
           p.vy = Math.min(p.vy + 70 * dt, 55);
@@ -136,11 +158,7 @@ export function PointerTrail() {
           if (!petal) continue;
           const a = t < 0.15 ? t / 0.15 : 1 - Math.max(0, (t - 0.55) / 0.45);
           ctx.globalAlpha = a * 0.95;
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate(p.rot);
-          ctx.drawImage(petal, -p.size / 2, -p.size / 2, p.size, p.size);
-          ctx.restore();
+          turned(petal, p.x, p.y, p.rot, p.size);
         } else if (p.kind === GLINT) {
           p.x += p.vx * dt;
           p.y += p.vy * dt;
@@ -149,20 +167,19 @@ export function PointerTrail() {
           p.vx *= drag;
           p.vy *= drag;
           // twinkle: swell in, then shrink away
-          const s = p.size * Math.sin(Math.PI * Math.min(1, t * 1.15));
+          const size = p.size * Math.sin(Math.PI * Math.min(1, t * 1.15));
           ctx.globalAlpha = 1 - t * 0.4;
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate(p.rot);
-          ctx.drawImage(glint, -s / 2, -s / 2, s, s);
-          ctx.restore();
+          turned(glint, p.x, p.y, p.rot, size);
         } else {
-          const s = p.size * (1 - t * 0.55);
+          const size = p.size * (1 - t * 0.55);
           ctx.globalAlpha = (1 - t) * (1 - t) * 0.85;
-          ctx.drawImage(glow, p.x - s / 2, p.y - s / 2, s, s);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.drawImage(glow, p.x - size / 2, p.y - size / 2, size, size);
+          cover(p.x, p.y, size / 2);
         }
       }
       ctx.globalAlpha = 1;
+      dirty = x0 < x1 ? [Math.floor(x0 - 2), Math.floor(y0 - 2), Math.ceil(x1 + 2), Math.ceil(y1 + 2)] : null;
       raf = ps.length ? requestAnimationFrame(tick) : 0;
     };
 
@@ -209,29 +226,90 @@ export function PointerTrail() {
         sway: rand(0, Math.PI * 2),
       });
 
-    let px: number | null = null;
-    let py: number | null = null;
-    let glowAcc = 0;
+    // The light runs along a curve through the midpoints between pointer
+    // samples, so a quick flick is one smooth arc rather than straight chords.
+    // It trails the pointer by half a sample; once the pointer rests, that
+    // last half is drawn in too.
+    let live = false;
+    let ax = 0; // the latest sample
+    let ay = 0;
+    let mx = 0; // how far the light has been laid
+    let my = 0;
+    let tail = false;
+    let lastSample = 0;
+    let ex = 0; // where the last glint/petal count was taken
+    let ey = 0;
+    let toGlow = 0; // distance left before the next wisp of light
     let glintAcc = 0;
     let petalAcc = PETAL_STEP * 0.6;
 
+    const lay = (x0: number, y0: number, x1: number, y1: number) => {
+      const d = Math.hypot(x1 - x0, y1 - y0);
+      if (!d) return;
+      let at = toGlow;
+      for (let n = 0; at <= d && n < 12; at += GLOW_STEP, n++) glowAt(x0 + ((x1 - x0) * at) / d, y0 + ((y1 - y0) * at) / d);
+      toGlow = at > d ? at - d : GLOW_STEP;
+    };
+    // a quadratic from where the light is, bending through the last sample,
+    // to the midpoint of the newest segment, laid as a few short straights
+    const curveTo = (cx: number, cy: number, x: number, y: number) => {
+      const steps = Math.min(8, Math.max(1, Math.ceil((Math.hypot(cx - mx, cy - my) + Math.hypot(x - cx, y - cy)) / 10)));
+      let px = mx;
+      let py = my;
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const u = 1 - t;
+        const qx = u * u * mx + 2 * u * t * cx + t * t * x;
+        const qy = u * u * my + 2 * u * t * cy + t * t * y;
+        lay(px, py, qx, qy);
+        px = qx;
+        py = qy;
+      }
+      mx = x;
+      my = y;
+    };
+    const settleTail = (now: number) => {
+      if (!tail || now - lastSample < 40) return;
+      tail = false;
+      lay(mx, my, ax, ay);
+      mx = ax;
+      my = ay;
+    };
+    const begin = (x: number, y: number) => {
+      live = true;
+      tail = false;
+      ax = mx = ex = x;
+      ay = my = ey = y;
+      toGlow = 0;
+    };
+
     const moveTo = (x: number, y: number) => {
-      if (performance.now() < pausedUntil || px === null || py === null) {
-        px = x;
-        py = y;
+      const now = performance.now();
+      if (now < pausedUntil || !live) {
+        begin(x, y);
         return;
       }
-      const dx = x - px;
-      const dy = y - py;
-      const d = Math.hypot(dx, dy);
+      const d = Math.hypot(x - ax, y - ay);
       if (d < 0.5) return;
-      // fill the gap between samples so a quick flick is still a smooth ribbon
-      let emitted = 0;
-      for (glowAcc += d; glowAcc >= GLOW_STEP && emitted < 12; glowAcc -= GLOW_STEP, emitted++) {
-        const k = 1 - glowAcc / d;
-        glowAt(px + dx * k, py + dy * k);
+      // a long jump after a rest (a new window, a trackpad lift) starts afresh
+      if (d > 100 && now - lastSample > 120) {
+        begin(x, y);
+        return;
       }
-      glowAcc = Math.min(glowAcc, GLOW_STEP);
+      curveTo(ax, ay, (ax + x) / 2, (ay + y) / 2);
+      ax = x;
+      ay = y;
+      tail = true;
+      lastSample = now;
+    };
+    // glints and blossoms are counted once per event, however many samples
+    // it carries, so their number doesn't depend on the mouse's polling rate
+    const sparkle = (x: number, y: number) => {
+      if (!live || performance.now() < pausedUntil) return;
+      const d = Math.hypot(x - ex, y - ey);
+      if (d < 0.5) return;
+      ex = x;
+      ey = y;
       glintAcc += d;
       if (glintAcc >= GLINT_STEP) {
         glintAcc = 0;
@@ -242,10 +320,7 @@ export function PointerTrail() {
         petalAcc = rand(-40, 20);
         petalAt(x, y);
       }
-      px = x;
-      py = y;
     };
-    // a tap or click: a brighter bloom of light, a ring of glints, two blossoms
     const burst = (x: number, y: number) => {
       if (performance.now() < pausedUntil) return;
       glowAt(x, y, rand(64, 76), 0.75);
@@ -256,14 +331,19 @@ export function PointerTrail() {
       petalAt(x, y);
     };
     const lift = () => {
-      px = null;
-      py = null;
+      if (live && tail) settleTail(Infinity);
+      live = false;
     };
 
     // Mouse and pen through pointer events; touch through touch events, which
     // keep arriving while the finger scrolls the page (pointer events stop).
     const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType !== "touch") moveTo(e.clientX, e.clientY);
+      if (e.pointerType === "touch") return;
+      // every sample since the last frame, not just the latest, so a fast
+      // flick keeps its true shape (Safari has no coalesced events)
+      const all = e.getCoalescedEvents?.();
+      for (const c of all?.length ? all : [e]) moveTo(c.clientX, c.clientY);
+      sparkle(e.clientX, e.clientY);
     };
     const onPointerDown = (e: PointerEvent) => {
       if (e.pointerType !== "touch") burst(e.clientX, e.clientY);
@@ -272,12 +352,13 @@ export function PointerTrail() {
       const t = e.touches[0];
       if (!t) return;
       burst(t.clientX, t.clientY);
-      px = t.clientX;
-      py = t.clientY;
+      begin(t.clientX, t.clientY);
     };
     const onTouchMove = (e: TouchEvent) => {
       const t = e.touches[0];
-      if (t) moveTo(t.clientX, t.clientY);
+      if (!t) return;
+      moveTo(t.clientX, t.clientY);
+      sparkle(t.clientX, t.clientY);
     };
     const opts = { passive: true } as const;
     window.addEventListener("pointermove", onPointerMove, opts);
@@ -287,6 +368,8 @@ export function PointerTrail() {
     window.addEventListener("touchmove", onTouchMove, opts);
     window.addEventListener("touchend", lift, opts);
     window.addEventListener("touchcancel", lift, opts);
+    const onHidden = () => document.hidden && lift();
+    document.addEventListener("visibilitychange", onHidden);
 
     return () => {
       cancelAnimationFrame(raf);
@@ -298,6 +381,7 @@ export function PointerTrail() {
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", lift);
       window.removeEventListener("touchcancel", lift);
+      document.removeEventListener("visibilitychange", onHidden);
     };
   }, [reduce]);
 
