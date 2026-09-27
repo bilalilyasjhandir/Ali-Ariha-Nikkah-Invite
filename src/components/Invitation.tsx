@@ -7,6 +7,7 @@ import { Scene } from "./opening/Scene";
 import { OpeningScene } from "./opening/OpeningScene";
 import { Sections } from "./sections/Sections";
 import { MusicButton } from "./music/MusicButton";
+import { PointerTrail } from "./trail/PointerTrail";
 
 // A link straight to a section (…/#rsvp) skips the envelope.
 const noop = () => () => {};
@@ -49,6 +50,7 @@ export function Invitation() {
       ) : (
         <OpeningScene cam={cam} camLift={camLift} envH={envH} onOpened={() => startTransition(() => setOpened(true))} />
       )}
+      <PointerTrail />
       <MusicButton offer={opened || !!deepLink} />
     </div>
   );

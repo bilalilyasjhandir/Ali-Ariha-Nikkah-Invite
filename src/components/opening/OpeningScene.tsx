@@ -30,6 +30,7 @@ import {
 } from "./geometry";
 import { LetterCard } from "./LetterCard";
 import { music } from "../music/music";
+import { pauseTrail } from "../trail/PointerTrail";
 import { CrackLight, SealBloom, SealCrumbs, SealLight, SealPiece, SealSheen, SealWhole, WARM } from "./WaxSeal";
 
 // open-flap shadow, interior, pocket, flap shadow, flap front, flap back,
@@ -363,6 +364,7 @@ export function OpeningScene({
     navigator.vibrate?.(8);
     // must run inside the tap itself, before anything is awaited
     music.prime();
+    pauseTrail(4800);
 
     if (reduce) {
       music.start();

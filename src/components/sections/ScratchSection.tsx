@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { EVENT } from "@/lib/event";
 import { IMG, SIZE } from "../opening/geometry";
 import { BLOOMS, Paper } from "../paper/Paper";
@@ -11,7 +11,6 @@ import { ScratchGlints } from "./ScratchGlints";
 import { Section } from "./Section";
 import { Body, Eyebrow, Reveal, RevealItem } from "./ui";
 
-const STORAGE_KEY = "ali-ariha:date-revealed";
 // not on the draft card, so not in EVENT.copy
 const REVEAL_LABEL = EVENT.copy.scratch.reveal;
 const EASE = [0.22, 0, 0.1, 1] as const;
@@ -25,20 +24,6 @@ const MONO = { w: 5.2, top: 9.5 };
 const MONO_H = (MONO.w * SIZE.monogram.h) / SIZE.monogram.w;
 const FRAME = { w: PATCH.w + GAP * 2, h: PATCH.h + GAP * 2, corner: PATCH.corner + GAP };
 const PATCH_RADIUS = `${PATCH.w / 2}cqw ${PATCH.w / 2}cqw ${PATCH.corner}cqw ${PATCH.corner}cqw`;
-
-// The server always prints the foil; the client then remembers a guest who
-// has already scratched it.
-const subscribe = (cb: () => void) => {
-  window.addEventListener("storage", cb);
-  return () => window.removeEventListener("storage", cb);
-};
-const readStored = () => {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === "1";
-  } catch {
-    return false;
-  }
-};
 
 function FrameArch() {
   const s = 10;
@@ -86,25 +71,20 @@ function Flank({ children }: { children: ReactNode }) {
 export function ScratchSection() {
   const { date, copy } = EVENT;
   const reduce = useReducedMotion();
-  const stored = useSyncExternalStore(subscribe, readStored, () => false);
   const [revealedNow, setRevealedNow] = useState<null | "scratch" | "button">(null);
   const [foilGone, setFoilGone] = useState(false);
   const [unit, setUnit] = useState(0);
   const patchRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLTimeElement>(null);
 
-  const revealed = stored || revealedNow !== null;
-  // storage flips to "revealed" the moment the guest reveals it, so from then
-  // on the foil follows its own fade rather than the stored flag
-  const showFoil = revealedNow ? !foilGone : !stored;
+  // every visit starts with fresh foil
+  const revealed = revealedNow !== null;
+  const showFoil = !foilGone;
 
   const reveal = (via: "scratch" | "button") => {
     if (revealed) return;
     setUnit((patchRef.current?.offsetWidth ?? 0) / PATCH.w);
     setRevealedNow(via);
-    try {
-      localStorage.setItem(STORAGE_KEY, "1");
-    } catch {}
     if (navigator.userActivation?.hasBeenActive ?? true) navigator.vibrate?.(10);
     if (via === "button") dateRef.current?.focus({ preventScroll: true });
   };
@@ -188,7 +168,7 @@ export function ScratchSection() {
           {/* the quiet way in, for keyboards and anyone who would rather not
               scratch; once the date is out, a foil rule closes the card */}
           <RevealItem className="relative mt-[2.4cqw] flex min-h-[44px] items-center justify-center">
-            {(!revealed || (revealedNow && !foilGone)) && (
+            {!foilGone && (
               <motion.button
                 type="button"
                 onClick={() => reveal("button")}
@@ -206,7 +186,7 @@ export function ScratchSection() {
               <motion.div
                 aria-hidden
                 className="absolute inset-0 flex items-center justify-center"
-                initial={revealedNow ? { opacity: 0 } : false}
+                initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: reduce ? 0.2 : 0.9, delay: reduce ? 0 : 0.6, ease: EASE }}
               >
