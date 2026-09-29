@@ -5,7 +5,6 @@ import { useEffect, useEffectEvent, useRef, useState, type CSSProperties } from 
 import { IMG, SIZE } from "../opening/geometry";
 import { WARM } from "../opening/WaxSeal";
 import { FOIL, FoilMonogram, PRESS } from "../paper/foil";
-import type { WindowReveal } from "./VenueCard";
 import { PinDrop, PinPatch, useWindowSize } from "./VenuePin";
 
 // A volvelle: a cotton wheel pinned into the map's window with a silver brad,
@@ -170,7 +169,14 @@ const RING: CSSProperties = {
 
 type Phase = "ready" | "turning" | "landed" | "leaving" | "gone";
 
-export const VenueWheel: WindowReveal = ({ go, onStart, onReveal, onDone }) => {
+// What the venue card hands the wheel. `go` turns true when the guest taps the
+// prompt under the window; onStart tells the card the wheel was set going by
+// hand; onReveal shows the venue (the map fades in, the name appears) as the
+// wheel lifts away; onDone blooms the shower from the pin's tip as it lands.
+// All three keep their identity.
+type Props = { go: boolean; onStart: () => void; onReveal: () => void; onDone: (x: number, y: number) => void };
+
+export const VenueWheel = ({ go, onStart, onReveal, onDone }: Props) => {
   const reduce = useReducedMotion() ?? false;
   const [phase, setPhase] = useState<Phase>("ready");
   const [dropping, setDropping] = useState(false);

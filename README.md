@@ -104,7 +104,9 @@ sit on the right on laptops.
 2. Save the date — scratch card that reveals the date
 3. Countdown, with add-to-calendar
 4. The day's schedule
-5. Venue — a closed gatefold the guest taps open, then the Google Maps location
+5. Venue — a paper wheel in the map's window: spun, it always lands on the
+   couple's monogram, lifts away into the map, and a silver pin drops onto the
+   venue
 6. A gentle request (no boxed gifts)
 7. RSVP
 8. Closing note

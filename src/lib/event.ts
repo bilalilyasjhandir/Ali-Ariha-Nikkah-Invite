@@ -46,7 +46,14 @@ export const EVENT = {
       after: "Thank you for celebrating with us",
     },
     schedule: { title: "The Day's Schedule" },
-    venue: { eyebrow: "The Venue", prompt: "Tap to open", button: "See On Google Maps", mapCredit: "Map data © Google" },
+    // the question stands where the venue's name will be until the wheel is spun
+    venue: {
+      eyebrow: "The Venue",
+      question: "Where shall we celebrate?",
+      spin: "Spin the wheel",
+      button: "See On Google Maps",
+      mapCredit: "Map data © Google",
+    },
     // not on the draft card — the couple asked simply for a note about boxed gifts
     gift: {
       eyebrow: "A Gentle Request",
