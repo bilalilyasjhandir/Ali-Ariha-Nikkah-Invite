@@ -1,18 +1,17 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { IMG, SIZE } from "../opening/geometry";
-import { WARM } from "../opening/WaxSeal";
+import { useEffect, useEffectEvent, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { FOIL_EDGE } from "../paper/foil";
 import type { WindowReveal } from "./VenueCard";
 import { mapPin } from "./VenueMap";
+import { PinDrop, PinPatch, pinSpot, useWindowSize } from "./VenuePin";
 
 // A compass rose engraved and stamped in silver foil on the window's paper,
 // its blued needle hovering over it. Set going, the needle spins round and
 // settles on the venue; the rose fades into the map coming up beneath it, and
-// a silver pin drops onto the spot. The rose is in cqw of the card (the window
-// is 64 x 56, arched across its width); the pin is in px, like the map.
+// a silver pin (VenuePin) drops onto the spot. The rose is in cqw of the card
+// (the window is 64 x 56, arched across its width).
 
 const WINDOW_W = 64;
 const CX = WINDOW_W / 2;
@@ -38,25 +37,6 @@ const SHADOW = { x: 1, y: 1.45, blur: 0.45 };
 // north, the way a real compass's needle sits off its card
 const IDLE_AT = -18;
 
-// Google draws its marker in px, 26 wide and 38 tall, its tip on mapPin and
-// its label starting 15px to the right. So the pin is in px too, just big
-// enough to cover it: a head of radius r, its centre `head` over the tip, which
-// sits a hair below Google's.
-const PIN = { r: 14.6, head: 25, tip: 0.3, pad: 3 };
-const PIN_BOX = { w: (PIN.r + PIN.pad) * 2, h: PIN.head + PIN.r + PIN.pad * 2 };
-const PIN_TOP = PIN.head + PIN.r + PIN.pad;
-const IVORY = 6.4;
-// Under the pin, a patch over Google's marker so the map comes up without it
-// while the pin is still falling: the window's paper, and over that the map's
-// own land tone fading in as the map does (VenueMap's 1.1s). It is the pin's
-// outline with the head drawn in by a hair, so it stays hidden once the pin is
-// down, and the point run on a hair past the pin's, round Google's soft tip.
-const LAND = "#fdfaf4";
-const MAP_FADE = { duration: 1.1, ease: [0.22, 0, 0.1, 1] } as const;
-const PATCH = { in: 0.45, on: 1 };
-// px: the shadow it lands on, and the rings that spread from it
-const CONTACT = { w: 20, h: 7, dx: 1.6, dy: 0.6 };
-const RIPPLE = { w: 60, h: 20, stroke: 1 };
 
 // s: the spin, 2-3 turns in all: up to speed in a blink, then easing down to
 // V1 (deg/s) as it comes round to the bearing
@@ -71,15 +51,11 @@ const ZETA = 0.36;
 const WD = W0 * Math.sqrt(1 - ZETA * ZETA);
 const REST_S = SPIN_S + Math.log(V1 / WD) / (ZETA * W0);
 // s: a breath once it has found the venue, then the reveal and the rose's
-// fade; the pin sets off a moment after, so its layers are drawn after the
-// map's; its fall, and its landing
+// fade; the pin sets off a moment after, so its layers are drawn after the map's
 const PAUSE_S = 0.3;
 const REVEAL_S = REST_S + PAUSE_S;
 const FADE_S = 0.6;
 const DROP_DELAY_S = 0.15;
-const FALL_S = 0.48;
-const BOUNCE_S = 0.38;
-const HOP = 4.5;
 // the needle's course runs up to the reveal, where what is left of the spring
 // is a fraction of a degree; 60 keyframes a second
 const COURSE_S = REVEAL_S;
@@ -186,14 +162,6 @@ const NEEDLE_PATH = (() => {
 })();
 const NEEDLE_LIT_EDGE = `M0 ${f(-NEEDLE.half)}${flank(-1, -1)}`;
 
-// a teardrop with its tip at (x, y): a head of radius r, its centre `head` above the tip
-const teardrop = (r: number, head: number, x = 0, y = 0) => {
-  const s = Math.sqrt(head * head - r * r);
-  const [tx, ty] = [(s * r) / head, -(s * s) / head];
-  return `M${f(x)} ${f(y)}L${f(x + tx)} ${f(y + ty)}A${f(r)} ${f(r)} 0 1 0 ${f(x - tx)} ${f(y + ty)}Z`;
-};
-const PIN_PATH = teardrop(PIN.r, PIN.head);
-const PATCH_PATH = `path("${teardrop(PIN.r - PATCH.in, PIN.head + PATCH.on, PIN_BOX.w / 2, PIN_TOP + PATCH.on)}")`;
 
 // the idle drift: now and then the needle is nudged and settles again
 const SWING = "cubic-bezier(0.37, 0, 0.63, 1)";
@@ -242,92 +210,6 @@ function course(from: number, bearing: number) {
   return { frames, to };
 }
 
-// The pin's fall, drawn out a touch as it gathers speed; the squash as it
-// lands, one small hop, and still. About its tip.
-type Bezier = [number, number, number, number];
-const DROP_S = FALL_S + BOUNCE_S;
-const DROP = {
-  duration: DROP_S,
-  times: [0, FALL_S, FALL_S + 0.07, FALL_S + 0.19, FALL_S + 0.3, DROP_S].map((t) => t / DROP_S),
-  ease: [
-    [0.4, 0, 0.75, 0.45],
-    [0.2, 0.6, 0.4, 1],
-    [0.3, 0.6, 0.45, 1],
-    [0.5, 0, 0.75, 0.5],
-    [0.3, 0.6, 0.4, 1],
-  ] as Bezier[],
-};
-// Until then it waits where it will land, all but invisible, so it is drawn
-// with the card: lifted out above the window, where the arch hides it, it
-// would not be drawn until it moved, and would hold up the frame it set off in.
-const falling = (from: number) => ({
-  opacity: DROP.times.map(() => 1),
-  transform: [
-    `translateY(${f(-from)}px) scale(1, 1)`,
-    "translateY(0px) scale(0.95, 1.06)",
-    "translateY(0px) scale(1.07, 0.9)",
-    `translateY(${-HOP}px) scale(0.98, 1.03)`,
-    "translateY(0px) scale(1.02, 0.97)",
-    "translateY(0px) scale(1, 1)",
-  ],
-});
-const DOWN = "translateY(0px) scale(1, 1)";
-
-// the shadow it lands on: nothing while the pin is high, gathering over the
-// second half of its fall, spreading as it squashes and thinning as it hops
-const CONTACT_FALL = {
-  animate: {
-    opacity: [WARM, WARM, 1, 1, 0.7, 1, 1],
-    transform: ["scale(0.3)", "scale(0.3)", "scale(1)", "scale(1.12, 1.05)", "scale(0.85)", "scale(1.03)", "scale(1)"],
-  },
-  transition: {
-    duration: DROP_S,
-    times: [0, (FALL_S * 0.5) / DROP_S, ...DROP.times.slice(1)],
-    ease: [[0, 0, 1, 1], [0.5, 0, 0.85, 0.6], ...DROP.ease.slice(1)] as Bezier[],
-  },
-};
-
-// two fine foil rings spreading from where it lands, timed from the fall's
-// start: the foil's brighter half, so they read as light, not as a line
-const RIPPLE_STOPS: [number, string][] = [
-  [0, "#9aa2aa"],
-  [0.3, "#dfe3e6"],
-  [0.5, "#8c959e"],
-  [0.75, "#c9ced3"],
-  [1, "#9aa2aa"],
-];
-const RIPPLE_SVG = (i: number) => (
-  <svg viewBox={`0 0 ${RIPPLE.w} ${RIPPLE.h}`} width={RIPPLE.w} height={RIPPLE.h} className="block overflow-visible">
-    <defs>
-      <linearGradient id={`compass-ripple-${i}`} x1="0" y1="0" x2="1" y2="0.4">
-        {RIPPLE_STOPS.map(([o, c]) => (
-          <stop key={o} offset={o} stopColor={c} />
-        ))}
-      </linearGradient>
-    </defs>
-    <ellipse
-      cx={RIPPLE.w / 2}
-      cy={RIPPLE.h / 2}
-      rx={(RIPPLE.w - RIPPLE.stroke) / 2}
-      ry={(RIPPLE.h - RIPPLE.stroke) / 2}
-      fill="none"
-      stroke={`url(#compass-ripple-${i})`}
-      strokeWidth={RIPPLE.stroke}
-    />
-  </svg>
-);
-const RIPPLES = [
-  { delay: 0, dur: 0.9, peak: 0.9, scale: 1 },
-  { delay: 0.14, dur: 1.15, peak: 0.55, scale: 1.3 },
-].map(({ delay, dur, peak, scale }) => ({
-  animate: { opacity: [0, peak, 0], transform: ["scale(0.2)", `scale(${scale})`] },
-  transition: {
-    delay: FALL_S + delay,
-    duration: dur,
-    ease: [0.2, 0.6, 0.35, 1] as Bezier,
-    opacity: { delay: FALL_S + delay, duration: dur, times: [0, 0.14, 1], ease: "linear" as const },
-  },
-}));
 
 const box = (x: number, y: number, w: number, h: number): CSSProperties => ({
   left: `${x}cqw`,
@@ -340,20 +222,6 @@ const box = (x: number, y: number, w: number, h: number): CSSProperties => ({
 const DOME =
   "radial-gradient(circle at 36% 30%, #ffffff 0%, #eceef0 12%, #c2c8ce 34%, #939ca4 60%, #747d86 82%, #a2aab1 100%)";
 
-// A tone laid down the way the window's paper is, on a box at (x, y) in a
-// window w x h: the card's grain multiplied in, lined up with the window's own
-// (which is 100cqw wide, centred in the window).
-const toned = (color: string, w: number, h: number, x: number, y: number): CSSProperties => {
-  const cw = (w * 100) / WINDOW_W;
-  const ch = (cw * SIZE.card.h) / SIZE.card.w;
-  return {
-    backgroundColor: color,
-    backgroundImage: `url(${IMG.card})`,
-    backgroundSize: `${cw}px ${ch}px`,
-    backgroundPosition: `${(w - cw) / 2 - x}px ${(h - ch) / 2 - y}px`,
-    backgroundBlendMode: "multiply",
-  };
-};
 
 // The rose in three sheets over one another, so each filter is measured in
 // px (on an element inside an SVG, a CSS filter is measured in its units).
@@ -499,118 +367,24 @@ const NEEDLE_SHADOW = needleSheet(<path d={NEEDLE_PATH} fill="rgba(34,28,22,0.38
   filter: `blur(${SHADOW.blur}cqw)`,
 });
 
-// The pin: polished silver, a shade darker on the half turned from the light,
-// with a bright bevel round its lit shoulder; set in its head, an ivory disc in
-// a fine bezel with a small foil star, the rose's in miniature.
-const HEAD = -PIN.head;
-const BEVEL = (() => {
-  const [a, b] = [polar(PIN.r - 1.2, -105), polar(PIN.r - 1.2, -5)];
-  return `M${f(a[0])} ${f(a[1] + HEAD)}A${PIN.r - 1.2} ${PIN.r - 1.2} 0 0 1 ${f(b[0])} ${f(b[1] + HEAD)}`;
-})();
-const MINI = [0, 90, 180, 270].flatMap((a) => {
-  const tip = polar(3.3, a);
-  return [-45, 45].map((side) => {
-    const s = polar(0.95, a + side);
-    const out = polar(1, a + Math.sign(side) * 90);
-    return { d: `M0 ${HEAD}L${f(s[0])} ${f(s[1] + HEAD)}L${f(tip[0])} ${f(tip[1] + HEAD)}Z`, lit: out[0] * LIGHT[0] + out[1] * LIGHT[1] > 0 };
-  });
-});
-
-const PIN_SVG = (
-  <svg
-    viewBox={`${-PIN_BOX.w / 2} ${-PIN_TOP} ${PIN_BOX.w} ${PIN_BOX.h}`}
-    width={PIN_BOX.w}
-    height={PIN_BOX.h}
-    className="block overflow-visible"
-    style={{ filter: "drop-shadow(0.6px 1.4px 1.1px rgba(30,26,22,0.36))" }}
-  >
-    <defs>
-      <linearGradient id="compass-pin" x1="0.15" y1="0" x2="0.7" y2="1">
-        <stop offset="0" stopColor="#ffffff" />
-        <stop offset="0.2" stopColor="#eef1f3" />
-        <stop offset="0.44" stopColor="#c0c7cd" />
-        <stop offset="0.57" stopColor="#99a2aa" />
-        <stop offset="0.72" stopColor="#c3c9cf" />
-        <stop offset="1" stopColor="#848d96" />
-      </linearGradient>
-      <radialGradient id="compass-pin-rim" gradientUnits="userSpaceOnUse" cx={0} cy={HEAD} r={PIN.r}>
-        <stop offset="0.66" stopColor="rgba(40,48,58,0)" />
-        <stop offset="1" stopColor="rgba(40,48,58,0.2)" />
-      </radialGradient>
-      <clipPath id="compass-pin-half">
-        <rect x={0} y={-PIN_TOP} width={PIN_BOX.w / 2} height={PIN_BOX.h} />
-      </clipPath>
-      <linearGradient id="compass-pin-bevel" gradientUnits="userSpaceOnUse" x1={-PIN.r} y1={HEAD + 4} x2={2} y2={HEAD - PIN.r}>
-        <stop offset="0" stopColor="rgba(255,255,255,0)" />
-        <stop offset="0.45" stopColor="#ffffff" />
-        <stop offset="1" stopColor="rgba(255,255,255,0)" />
-      </linearGradient>
-      <radialGradient id="compass-pin-shine" gradientUnits="userSpaceOnUse" cx={-5.5} cy={HEAD - 5.5} r={5}>
-        <stop offset="0" stopColor="rgba(255,255,255,0.85)" />
-        <stop offset="1" stopColor="rgba(255,255,255,0)" />
-      </radialGradient>
-      <radialGradient id="compass-pin-ivory" cx="0.42" cy="0.36" r="0.7">
-        <stop offset="0" stopColor="#fffdf9" />
-        <stop offset="0.6" stopColor="#f3eee5" />
-        <stop offset="1" stopColor="#e0d9cc" />
-      </radialGradient>
-      <radialGradient id="compass-pin-set" cx="0.5" cy="0.64" r="0.62">
-        <stop offset="0.74" stopColor="rgba(70,58,46,0)" />
-        <stop offset="1" stopColor="rgba(70,58,46,0.3)" />
-      </radialGradient>
-    </defs>
-    <path d={PIN_PATH} fill="url(#compass-pin)" />
-    <path d={PIN_PATH} fill="rgba(36,44,54,0.12)" clipPath="url(#compass-pin-half)" />
-    <path d={PIN_PATH} fill="url(#compass-pin-rim)" />
-    <circle cx={-5.5} cy={HEAD - 5.5} r={5} fill="url(#compass-pin-shine)" />
-    <path d={BEVEL} fill="none" stroke="url(#compass-pin-bevel)" strokeWidth={1.1} strokeLinecap="round" />
-
-    <circle cy={HEAD} r={IVORY + 0.6} fill="none" stroke="#eef1f3" strokeWidth={1.2} />
-    <circle cy={HEAD} r={IVORY + 1.2} fill="none" stroke="rgba(46,54,64,0.4)" strokeWidth={0.5} />
-    <circle cy={HEAD} r={IVORY} fill="url(#compass-pin-ivory)" />
-    <circle cy={HEAD} r={IVORY} fill="url(#compass-pin-set)" stroke="rgba(60,68,78,0.45)" strokeWidth={0.5} />
-    {MINI.map(({ d, lit }) => (
-      <path key={d} d={d} fill={lit ? "#e9edf0" : "#78818a"} stroke="rgba(52,60,70,0.55)" strokeWidth={0.3} strokeLinejoin="round" />
-    ))}
-
-    <path d={PIN_PATH} fill="none" stroke="rgba(40,48,58,0.6)" strokeWidth={0.75} />
-  </svg>
-);
 
 type Phase = "ready" | "seeking" | "leaving" | "gone";
-type Drop = "up" | "falling" | "down";
 
 export const VenueCompass: WindowReveal = ({ go, onStart, onReveal, onDone }) => {
   const reduce = useReducedMotion() ?? false;
   const [phase, setPhase] = useState<Phase>("ready");
-  const [drop, setDrop] = useState<Drop>("up");
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const [dropping, setDropping] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const needleRef = useRef<HTMLDivElement>(null);
   const shadowRef = useRef<HTMLDivElement>(null);
-  const pinRef = useRef<HTMLDivElement>(null);
-  const tipRef = useRef<HTMLDivElement>(null);
-  const sizeRef = useRef({ w: 0, h: 0 });
+  const size = useWindowSize(rootRef);
+  const sizeRef = useRef(size);
   const goRef = useRef(() => {});
 
   const reveal = useEffectEvent(() => onReveal());
-  // the shower blooms from the pin's tip
-  const finish = useEffectEvent(() => {
-    const r = tipRef.current?.getBoundingClientRect();
-    if (r) onDone(r.left, r.top);
-  });
-
-  // the window as laid out, the card's tilt left out: it places the pin
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const ro = new ResizeObserver(([e]) => {
-      sizeRef.current = { w: e.contentRect.width, h: e.contentRect.height };
-      setSize(sizeRef.current);
-    });
-    ro.observe(root);
-    return () => ro.disconnect();
-  }, []);
+    sizeRef.current = size;
+  }, [size]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -630,13 +404,12 @@ export const VenueCompass: WindowReveal = ({ go, onStart, onReveal, onDone }) =>
     io?.observe(root);
 
     goRef.current = () => {
-      if (!idle) return;
+      if (!idle || !sizeRef.current) return;
       idle = false;
       if (reduce) {
         setPhase("leaving");
-        setDrop("down");
+        setDropping(true);
         reveal();
-        finish();
         return;
       }
       // off from wherever the drift had got to, round to the venue's bearing
@@ -659,7 +432,7 @@ export const VenueCompass: WindowReveal = ({ go, onStart, onReveal, onDone }) =>
         reveal();
         setPhase("leaving");
       });
-      after(REVEAL_S + DROP_DELAY_S, () => setDrop("falling"));
+      after(REVEAL_S + DROP_DELAY_S, () => setDropping(true));
     };
 
     return () => {
@@ -670,52 +443,23 @@ export const VenueCompass: WindowReveal = ({ go, onStart, onReveal, onDone }) =>
     };
   }, [reduce]);
 
+  // (and again once the window has been measured, should a tap beat that)
   const begin = useEffectEvent(() => goRef.current());
   useEffect(() => {
     if (go) begin();
-  }, [go]);
-
-  // The shower blooms the moment the pin touches down: read off the fall's own
-  // clock, which a busy frame can hold back, rather than a timer, which it can't.
-  useEffect(() => {
-    if (drop !== "falling") return;
-    const since = performance.now();
-    let raf = requestAnimationFrame(function watch(now) {
-      const anim = pinRef.current?.getAnimations().find((a) => a.playState === "running");
-      const t = anim ? Number(anim.currentTime) : now - since;
-      if (t >= FALL_S * 1000) finish();
-      else raf = requestAnimationFrame(watch);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [drop]);
+  }, [go, size]);
 
   const leaving = phase === "leaving" || phase === "gone";
-  const pin = size && mapPin(size.w, size.h);
-  const tipY = pin ? pin.y + PIN.tip : 0;
-  // the pin's box, its tip on the marker
-  const pinBox = pin && { left: pin.x - PIN_BOX.w / 2, top: tipY - PIN_TOP, width: PIN_BOX.w, height: PIN_BOX.h };
-  // from just above the window's top edge, where the arch hides it
-  const fall = useMemo(() => falling(tipY + 2), [tipY]);
+  const spot = size && pinSpot(size);
 
   return (
     <div ref={rootRef} aria-hidden className="absolute inset-0 pointer-events-none select-none">
-      {size && pinBox && (
-        <>
-          <div className="absolute" style={{ ...pinBox, ...toned("#ede8df", size.w, size.h, pinBox.left, pinBox.top), clipPath: PATCH_PATH }} />
-          <motion.div
-            className="absolute"
-            style={{ ...pinBox, ...toned(LAND, size.w, size.h, pinBox.left, pinBox.top), clipPath: PATCH_PATH }}
-            initial={false}
-            animate={{ opacity: leaving ? 1 : 0 }}
-            transition={reduce ? { duration: 0 } : MAP_FADE}
-          />
-        </>
-      )}
+      <PinPatch size={size} revealing={leaving} reduce={reduce} />
 
       {phase !== "gone" && (
         <motion.div
           className="absolute inset-0"
-          style={{ transformOrigin: pin ? `${pin.x}px ${tipY}px` : undefined }}
+          style={{ transformOrigin: spot ? `${spot.x}px ${spot.tipY}px` : undefined }}
           initial={false}
           animate={!leaving ? { opacity: 1, transform: "scale(1)" } : reduce ? { opacity: 0 } : { opacity: 0, transform: "scale(0.9)" }}
           transition={reduce ? { duration: 0.3 } : { duration: FADE_S, ease: [0.4, 0, 0.6, 1] }}
@@ -753,59 +497,8 @@ export const VenueCompass: WindowReveal = ({ go, onStart, onReveal, onDone }) =>
         </motion.div>
       )}
 
-      {pin && (
-        <>
-          {/* its shadow on the map, gathering as it comes down */}
-          <motion.div
-            className="absolute"
-            style={{
-              left: pin.x - CONTACT.w / 2 + CONTACT.dx,
-              top: tipY - CONTACT.h / 2 + CONTACT.dy,
-              width: CONTACT.w,
-              height: CONTACT.h,
-              background: "radial-gradient(closest-side, rgba(30,26,22,0.42), rgba(30,26,22,0.2) 55%, rgba(30,26,22,0))",
-            }}
-            initial={false}
-            animate={
-              reduce || drop === "down"
-                ? { opacity: drop === "up" ? WARM : 1, transform: "scale(1)" }
-                : drop === "falling"
-                  ? CONTACT_FALL.animate
-                  : { opacity: WARM, transform: "scale(0.3)" }
-            }
-            transition={reduce ? { duration: 0.3 } : drop === "falling" ? CONTACT_FALL.transition : { duration: 0 }}
-          />
-
-          {!reduce &&
-            RIPPLES.map((r, i) => (
-              <motion.div
-                key={i}
-                className="absolute"
-                style={{ left: pin.x - RIPPLE.w / 2, top: tipY - RIPPLE.h / 2, width: RIPPLE.w, height: RIPPLE.h }}
-                initial={false}
-                animate={drop === "up" ? { opacity: WARM } : r.animate}
-                transition={drop === "up" ? { duration: 0 } : r.transition}
-              >
-                {RIPPLE_SVG(i)}
-              </motion.div>
-            ))}
-
-          <motion.div
-            ref={pinRef}
-            className="absolute"
-            style={{ ...pinBox, transformOrigin: `50% ${PIN_TOP}px` }}
-            initial={false}
-            animate={drop === "up" ? { opacity: WARM, transform: DOWN } : drop === "down" || reduce ? { opacity: 1, transform: DOWN } : fall}
-            transition={reduce ? { duration: 0.3 } : drop === "falling" ? DROP : { duration: 0 }}
-            onAnimationComplete={() => drop === "falling" && setDrop("down")}
-          >
-            {PIN_SVG}
-          </motion.div>
-
-          {/* where the pin's tip comes to rest */}
-          <div ref={tipRef} className="absolute" style={{ left: pin.x, top: tipY }} />
-        </>
-      )}
+      {/* the shower blooms from the pin's tip as it lands */}
+      <PinDrop size={size} fall={dropping} reduce={reduce} onLanded={onDone} />
 
       {/* what a tap finds: the rose, and nothing round it */}
       <div

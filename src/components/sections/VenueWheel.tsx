@@ -6,10 +6,13 @@ import { IMG, SIZE } from "../opening/geometry";
 import { WARM } from "../opening/WaxSeal";
 import { FOIL, FoilMonogram, PRESS } from "../paper/foil";
 import type { WindowReveal } from "./VenueCard";
+import { PinDrop, PinPatch, useWindowSize } from "./VenuePin";
 
 // A volvelle: a cotton wheel pinned into the map's window with a silver brad,
 // under a little silver clapper. It turns under the finger and spins off when
-// let go, and however it is sent it comes to rest on the couple's monogram.
+// let go, and however it is sent it comes to rest on the couple's monogram;
+// then it lifts away into the map, and a silver pin (VenuePin) drops onto the
+// venue.
 // Sizes are in cqw of the card; the window is 64 x 56, arched across its width.
 
 const WINDOW_W = 64;
@@ -47,9 +50,11 @@ const FLICK = [720, 2600] as const;
 const WIND = 0.24;
 // deg: how far off the monogram's centre line the pointer comes to rest
 const REST = [2, 7] as const;
-// s: the glow's beat before the reveal, and the lift off the card
+// s: the glow's beat before the reveal, and the lift off the card; the pin
+// sets off a moment after, so its layers are drawn after the map's
 const GLOW_S = 0.4;
 const LIFT_S = 0.6;
+const DROP_DELAY_S = 0.15;
 // the clapper: how far a spoke bends it before slipping past (deg), how much
 // of the wheel's turn that takes, and the spring it snaps back on
 const CLAP_MAX = 13;
@@ -165,9 +170,12 @@ const RING: CSSProperties = {
 
 type Phase = "ready" | "turning" | "landed" | "leaving" | "gone";
 
-export const VenueWheel: WindowReveal = ({ go, onStart, onDone }) => {
+export const VenueWheel: WindowReveal = ({ go, onStart, onReveal, onDone }) => {
   const reduce = useReducedMotion() ?? false;
   const [phase, setPhase] = useState<Phase>("ready");
+  const [dropping, setDropping] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const size = useWindowSize(rootRef);
   const discRef = useRef<HTMLDivElement>(null);
   const swayRef = useRef<HTMLDivElement>(null);
   const faceRef = useRef<HTMLDivElement>(null);
@@ -176,11 +184,7 @@ export const VenueWheel: WindowReveal = ({ go, onStart, onDone }) => {
   const goRef = useRef(() => {});
 
   const start = useEffectEvent(() => onStart());
-  // the shower blooms from the brad
-  const finish = useEffectEvent(() => {
-    const r = discRef.current?.getBoundingClientRect();
-    if (r) onDone(r.left + r.width / 2, r.top + r.height / 2);
-  });
+  const reveal = useEffectEvent(() => onReveal());
 
   useEffect(() => {
     const disc = discRef.current;
@@ -279,8 +283,9 @@ export const VenueWheel: WindowReveal = ({ go, onStart, onDone }) => {
           landed = true;
           setPhase("landed");
           timer = window.setTimeout(() => {
-            finish();
+            reveal();
             setPhase("leaving");
+            timer = window.setTimeout(() => setDropping(true), DROP_DELAY_S * 1000);
           }, GLOW_S * 1000);
         }
         if (t >= T) mode = "still";
@@ -329,8 +334,9 @@ export const VenueWheel: WindowReveal = ({ go, onStart, onDone }) => {
 
     goRef.current = () => {
       if (reduce) {
-        finish();
+        reveal();
         setPhase("leaving");
+        setDropping(true);
         return;
       }
       if (mode !== "idle") return;
@@ -420,170 +426,178 @@ export const VenueWheel: WindowReveal = ({ go, onStart, onDone }) => {
   }, [go]);
 
   const leaving = phase === "leaving" || phase === "gone";
-  if (phase === "gone") return <div aria-hidden className="absolute inset-0 pointer-events-none" />;
 
   return (
-    <div aria-hidden className="absolute inset-0 pointer-events-none select-none">
-      {/* the disc, its brad and its shadow: they lift off the card together */}
-      <motion.div
-        ref={discRef}
-        className="absolute"
-        style={box(CX - R, CY - R, R * 2, R * 2)}
-        initial={false}
-        animate={
-          !leaving
-            ? { opacity: 1, transform: "scale(1)" }
-            : reduce
-              ? { opacity: 0 }
-              : { opacity: [1, 1, 0], transform: ["scale(1)", "scale(1.03)", "scale(0.9)"] }
-        }
-        transition={
-          reduce
-            ? { duration: 0.3 }
-            : {
-                transform: { duration: LIFT_S, times: [0, 0.3, 1], ease: [[0.2, 0.6, 0.35, 1], [0.55, 0, 0.8, 0.6]] },
-                opacity: { duration: LIFT_S, times: [0, 0.2, 1], ease: ["linear", [0.4, 0, 0.7, 1]] },
-              }
-        }
-        onAnimationComplete={() => leaving && setPhase("gone")}
-      >
-        <div
-          className="absolute inset-0 rounded-full bg-[#efe9df]"
-          style={{ boxShadow: "0 0.12cqw 0.25cqw rgba(40,30,20,0.3), 0.3cqw 0.9cqw 1.6cqw rgba(40,30,20,0.2)" }}
-        />
+    <div ref={rootRef} aria-hidden className="absolute inset-0 pointer-events-none select-none">
+      <PinPatch size={size} revealing={leaving} reduce={reduce} />
 
-        <div ref={swayRef} className="absolute inset-0">
-          <div
-            ref={faceRef}
-            className="absolute inset-0 overflow-hidden rounded-full"
-            style={{
-              backgroundColor: "#f5f1ea",
-              backgroundImage: `url(${IMG.card})`,
-              backgroundSize: "110cqw auto",
-              backgroundPosition: "center",
-            }}
+      {phase !== "gone" && (
+        <>
+          {/* the disc, its brad and its shadow: they lift off the card together */}
+          <motion.div
+            ref={discRef}
+            className="absolute"
+            style={box(CX - R, CY - R, R * 2, R * 2)}
+            initial={false}
+            animate={
+              !leaving
+                ? { opacity: 1, transform: "scale(1)" }
+                : reduce
+                  ? { opacity: 0 }
+                  : { opacity: [1, 1, 0], transform: ["scale(1)", "scale(1.03)", "scale(0.9)"] }
+            }
+            transition={
+              reduce
+                ? { duration: 0.3 }
+                : {
+                    transform: { duration: LIFT_S, times: [0, 0.3, 1], ease: [[0.2, 0.6, 0.35, 1], [0.55, 0, 0.8, 0.6]] },
+                    opacity: { duration: LIFT_S, times: [0, 0.2, 1], ease: ["linear", [0.4, 0, 0.7, 1]] },
+                  }
+            }
+            onAnimationComplete={() => leaving && setPhase("gone")}
           >
-            <svg viewBox={`${-R} ${-R} ${R * 2} ${R * 2}`} className="absolute inset-0 size-full">
-              <defs>
-                <linearGradient id="volvelle-foil" gradientUnits="userSpaceOnUse" x1={-R} y1={-R * 0.5} x2={R} y2={R * 0.5}>
-                  {FOIL_STOPS.map(([o, c]) => (
-                    <stop key={o} offset={o} stopColor={c} />
+            <div
+              className="absolute inset-0 rounded-full bg-[#efe9df]"
+              style={{ boxShadow: "0 0.12cqw 0.25cqw rgba(40,30,20,0.3), 0.3cqw 0.9cqw 1.6cqw rgba(40,30,20,0.2)" }}
+            />
+
+            <div ref={swayRef} className="absolute inset-0">
+              <div
+                ref={faceRef}
+                className="absolute inset-0 overflow-hidden rounded-full"
+                style={{
+                  backgroundColor: "#f5f1ea",
+                  backgroundImage: `url(${IMG.card})`,
+                  backgroundSize: "110cqw auto",
+                  backgroundPosition: "center",
+                }}
+              >
+                <svg viewBox={`${-R} ${-R} ${R * 2} ${R * 2}`} className="absolute inset-0 size-full">
+                  <defs>
+                    <linearGradient id="volvelle-foil" gradientUnits="userSpaceOnUse" x1={-R} y1={-R * 0.5} x2={R} y2={R * 0.5}>
+                      {FOIL_STOPS.map(([o, c]) => (
+                        <stop key={o} offset={o} stopColor={c} />
+                      ))}
+                    </linearGradient>
+                  </defs>
+                  {WASHES.map(({ i, body, glaze }) => (
+                    <g key={i} transform={`rotate(${i * SLICE})`}>
+                      <path d={body} fill="rgba(150,196,222,0.075)" stroke="rgba(118,168,200,0.09)" strokeWidth={0.22} />
+                      <path d={glaze} fill="rgba(170,210,232,0.05)" />
+                    </g>
                   ))}
-                </linearGradient>
-              </defs>
-              {WASHES.map(({ i, body, glaze }) => (
-                <g key={i} transform={`rotate(${i * SLICE})`}>
-                  <path d={body} fill="rgba(150,196,222,0.075)" stroke="rgba(118,168,200,0.09)" strokeWidth={0.22} />
-                  <path d={glaze} fill="rgba(170,210,232,0.05)" />
-                </g>
-              ))}
-              <g fill="none" stroke="url(#volvelle-foil)" style={{ filter: "drop-shadow(0 0.5px 0 rgba(255,255,255,0.7))" }}>
-                <circle r={HUB} strokeWidth={0.9} vectorEffect="non-scaling-stroke" />
-                {SPOKES.map(([[x1, y1], [x2, y2]], k) => (
-                  <line key={k} x1={x1} y1={y1} x2={x2} y2={y2} strokeWidth={0.9} vectorEffect="non-scaling-stroke" />
+                  <g fill="none" stroke="url(#volvelle-foil)" style={{ filter: "drop-shadow(0 0.5px 0 rgba(255,255,255,0.7))" }}>
+                    <circle r={HUB} strokeWidth={0.9} vectorEffect="non-scaling-stroke" />
+                    {SPOKES.map(([[x1, y1], [x2, y2]], k) => (
+                      <line key={k} x1={x1} y1={y1} x2={x2} y2={y2} strokeWidth={0.9} vectorEffect="non-scaling-stroke" />
+                    ))}
+                  </g>
+                </svg>
+
+                {WORDS.map((word, i) => (
+                  <div key={word} className="absolute inset-0" style={{ transform: `rotate(${(i + 1) * SLICE}deg)` }}>
+                    <span
+                      className="absolute left-1/2 font-script leading-none whitespace-nowrap text-ink"
+                      style={{ top: `${R - WORD.r}cqw`, fontSize: `${WORD.size}cqw`, transform: "translate(-50%, -50%)", ...PRESS }}
+                    >
+                      {word}
+                    </span>
+                  </div>
                 ))}
-              </g>
-            </svg>
 
-            {WORDS.map((word, i) => (
-              <div key={word} className="absolute inset-0" style={{ transform: `rotate(${(i + 1) * SLICE}deg)` }}>
-                <span
-                  className="absolute left-1/2 font-script leading-none whitespace-nowrap text-ink"
-                  style={{ top: `${R - WORD.r}cqw`, fontSize: `${WORD.size}cqw`, transform: "translate(-50%, -50%)", ...PRESS }}
-                >
-                  {word}
-                </span>
+                <div className="absolute" style={box(R - MONO.w / 2, R - MONO.r - MONO_H / 2, MONO.w, MONO_H)}>
+                  <FoilMonogram className="w-full" />
+                </div>
+
+                {/* the monogram's slice, catching the light as the wheel comes to rest */}
+                <motion.div
+                  className="absolute inset-0"
+                  style={{
+                    background: `radial-gradient(circle at 50% ${50 - (MONO.r / R / 2) * 100}%, rgba(255,255,255,0.9), rgba(232,242,248,0.55) 20%, rgba(232,242,248,0) 46%)`,
+                    maskImage: "conic-gradient(from -30deg, transparent, #000 7deg 53deg, transparent 60deg)",
+                    WebkitMaskImage: "conic-gradient(from -30deg, transparent, #000 7deg 53deg, transparent 60deg)",
+                  }}
+                  initial={false}
+                  animate={{ opacity: phase === "landed" || leaving ? 1 : WARM }}
+                  transition={{ duration: 0.3, ease: [0.22, 0, 0.1, 1] }}
+                />
               </div>
-            ))}
-
-            <div className="absolute" style={box(R - MONO.w / 2, R - MONO.r - MONO_H / 2, MONO.w, MONO_H)}>
-              <FoilMonogram className="w-full" />
             </div>
 
-            {/* the monogram's slice, catching the light as the wheel comes to rest */}
-            <motion.div
-              className="absolute inset-0"
+            {/* static over the turning face: the light on the paper, the cut edge,
+                and the foil rim, whose glint stays put as the wheel turns */}
+            <div
+              className="absolute inset-0 rounded-full"
               style={{
-                background: `radial-gradient(circle at 50% ${50 - (MONO.r / R / 2) * 100}%, rgba(255,255,255,0.9), rgba(232,242,248,0.55) 20%, rgba(232,242,248,0) 46%)`,
-                maskImage: "conic-gradient(from -30deg, transparent, #000 7deg 53deg, transparent 60deg)",
-                WebkitMaskImage: "conic-gradient(from -30deg, transparent, #000 7deg 53deg, transparent 60deg)",
+                background:
+                  "radial-gradient(circle at 30% 24%, rgba(255,255,255,0.24), rgba(255,255,255,0) 58%), radial-gradient(circle at 72% 80%, rgba(90,74,60,0.07), rgba(90,74,60,0) 62%)",
+                boxShadow:
+                  "inset 0 0.15cqw 0.1cqw -0.05cqw rgba(255,255,255,0.85), inset 0 -0.2cqw 0.35cqw rgba(90,74,60,0.12), 0 0 0 0.5px rgba(82,68,56,0.22)",
               }}
-              initial={false}
-              animate={{ opacity: phase === "landed" || leaving ? 1 : WARM }}
-              transition={{ duration: 0.3, ease: [0.22, 0, 0.1, 1] }}
             />
-          </div>
-        </div>
+            {RIMS.map((r) => (
+              <div
+                key={r}
+                className="absolute sheen animate-[foil-sheen_7s_ease-in-out_infinite]"
+                style={{ ...RING, inset: `${R - r}cqw`, filter: "drop-shadow(0 0.5px 0 rgba(255,255,255,0.7))" }}
+              />
+            ))}
 
-        {/* static over the turning face: the light on the paper, the cut edge,
-            and the foil rim, whose glint stays put as the wheel turns */}
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{
-            background:
-              "radial-gradient(circle at 30% 24%, rgba(255,255,255,0.24), rgba(255,255,255,0) 58%), radial-gradient(circle at 72% 80%, rgba(90,74,60,0.07), rgba(90,74,60,0) 62%)",
-            boxShadow:
-              "inset 0 0.15cqw 0.1cqw -0.05cqw rgba(255,255,255,0.85), inset 0 -0.2cqw 0.35cqw rgba(90,74,60,0.12), 0 0 0 0.5px rgba(82,68,56,0.22)",
-          }}
-        />
-        {RIMS.map((r) => (
-          <div
-            key={r}
-            className="absolute sheen animate-[foil-sheen_7s_ease-in-out_infinite]"
-            style={{ ...RING, inset: `${R - r}cqw`, filter: "drop-shadow(0 0.5px 0 rgba(255,255,255,0.7))" }}
-          />
-        ))}
+            <div
+              className="absolute rounded-full"
+              style={{
+                ...box(R - BRAD / 2, R - BRAD / 2, BRAD, BRAD),
+                background: DOME,
+                boxShadow:
+                  "0 0.1cqw 0.15cqw rgba(30,26,22,0.4), 0.15cqw 0.4cqw 0.6cqw rgba(30,26,22,0.22), inset 0 -0.12cqw 0.2cqw rgba(40,46,54,0.35)",
+              }}
+            />
+          </motion.div>
 
-        <div
-          className="absolute rounded-full"
-          style={{
-            ...box(R - BRAD / 2, R - BRAD / 2, BRAD, BRAD),
-            background: DOME,
-            boxShadow:
-              "0 0.1cqw 0.15cqw rgba(30,26,22,0.4), 0.15cqw 0.4cqw 0.6cqw rgba(30,26,22,0.22), inset 0 -0.12cqw 0.2cqw rgba(40,46,54,0.35)",
-          }}
-        />
-      </motion.div>
-
-      {/* the clapper, on its rivet above the rim */}
-      <motion.div
-        className="absolute"
-        style={box(CX - CLAP_BOX.w / 2, PIVOT_Y - CLAP_BOX.w / 2, CLAP_BOX.w, CLAP_BOX.h)}
-        initial={false}
-        animate={{ opacity: leaving ? 0 : 1 }}
-        transition={{ duration: reduce ? 0.3 : 0.4, ease: "easeOut" }}
-      >
-        <div ref={clapRef} className="absolute inset-0" style={{ transformOrigin: `50% ${CLAP_BOX.w / 2}cqw` }}>
-          <svg
-            viewBox={`${-CLAP_BOX.w / 2} ${-CLAP_BOX.w / 2} ${CLAP_BOX.w} ${CLAP_BOX.h}`}
-            className="absolute inset-0 size-full overflow-visible"
-            style={{ filter: "drop-shadow(0.15cqw 0.35cqw 0.25cqw rgba(30,26,22,0.32))" }}
+          {/* the clapper, on its rivet above the rim */}
+          <motion.div
+            className="absolute"
+            style={box(CX - CLAP_BOX.w / 2, PIVOT_Y - CLAP_BOX.w / 2, CLAP_BOX.w, CLAP_BOX.h)}
+            initial={false}
+            animate={{ opacity: leaving ? 0 : 1 }}
+            transition={{ duration: reduce ? 0.3 : 0.4, ease: "easeOut" }}
           >
-            <defs>
-              <linearGradient id="volvelle-clapper" x1="0" y1="0" x2="0.6" y2="1">
-                <stop offset="0" stopColor="#f1f3f4" />
-                <stop offset="0.35" stopColor="#c6ccd1" />
-                <stop offset="0.7" stopColor="#9aa2aa" />
-                <stop offset="1" stopColor="#77808a" />
-              </linearGradient>
-              <radialGradient id="volvelle-rivet" cx="0.36" cy="0.3" r="0.75">
-                <stop offset="0" stopColor="#ffffff" />
-                <stop offset="0.3" stopColor="#d3d8dc" />
-                <stop offset="0.7" stopColor="#8a939b" />
-                <stop offset="1" stopColor="#6d7680" />
-              </radialGradient>
-              {/* the leaf is pressed with a ridge down its middle: the half
-                  turned from the light is a shade darker */}
-              <clipPath id="volvelle-shade">
-                <rect x={0} y={-2} width={2} height={CLAP_BOX.h + 2} />
-              </clipPath>
-            </defs>
-            <path d={CLAP_PATH} fill="url(#volvelle-clapper)" stroke="rgba(46,52,60,0.5)" strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
-            <path d={CLAP_PATH} fill="rgba(38,46,56,0.2)" clipPath="url(#volvelle-shade)" />
-            <circle r={0.5} fill="url(#volvelle-rivet)" stroke="rgba(46,52,60,0.45)" strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
-          </svg>
-        </div>
-      </motion.div>
+            <div ref={clapRef} className="absolute inset-0" style={{ transformOrigin: `50% ${CLAP_BOX.w / 2}cqw` }}>
+              <svg
+                viewBox={`${-CLAP_BOX.w / 2} ${-CLAP_BOX.w / 2} ${CLAP_BOX.w} ${CLAP_BOX.h}`}
+                className="absolute inset-0 size-full overflow-visible"
+                style={{ filter: "drop-shadow(0.15cqw 0.35cqw 0.25cqw rgba(30,26,22,0.32))" }}
+              >
+                <defs>
+                  <linearGradient id="volvelle-clapper" x1="0" y1="0" x2="0.6" y2="1">
+                    <stop offset="0" stopColor="#f1f3f4" />
+                    <stop offset="0.35" stopColor="#c6ccd1" />
+                    <stop offset="0.7" stopColor="#9aa2aa" />
+                    <stop offset="1" stopColor="#77808a" />
+                  </linearGradient>
+                  <radialGradient id="volvelle-rivet" cx="0.36" cy="0.3" r="0.75">
+                    <stop offset="0" stopColor="#ffffff" />
+                    <stop offset="0.3" stopColor="#d3d8dc" />
+                    <stop offset="0.7" stopColor="#8a939b" />
+                    <stop offset="1" stopColor="#6d7680" />
+                  </radialGradient>
+                  {/* the leaf is pressed with a ridge down its middle: the half
+                      turned from the light is a shade darker */}
+                  <clipPath id="volvelle-shade">
+                    <rect x={0} y={-2} width={2} height={CLAP_BOX.h + 2} />
+                  </clipPath>
+                </defs>
+                <path d={CLAP_PATH} fill="url(#volvelle-clapper)" stroke="rgba(46,52,60,0.5)" strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
+                <path d={CLAP_PATH} fill="rgba(38,46,56,0.2)" clipPath="url(#volvelle-shade)" />
+                <circle r={0.5} fill="url(#volvelle-rivet)" stroke="rgba(46,52,60,0.45)" strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
+              </svg>
+            </div>
+          </motion.div>
+        </>
+      )}
+
+      {/* the shower blooms from the pin's tip as it lands */}
+      <PinDrop size={size} fall={dropping} reduce={reduce} onLanded={onDone} />
 
       {/* what the finger takes hold of: the disc's circle, and nothing round it */}
       <div
