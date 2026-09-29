@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { EVENT } from "@/lib/event";
 import { IMG } from "../opening/geometry";
 import { FOIL } from "../paper/foil";
@@ -20,6 +20,9 @@ const outerRadius = `${W / 2 + MAT}cqw ${W / 2 + MAT}cqw ${1.4 + MAT}cqw ${1.4 +
 // credit, so it is printed under the window instead); the extra on the left
 // moves the pin off-centre so its label has room to the right.
 const CROP = { top: 56, bottom: 100, left: 140 };
+// Where Google's marker lands in the window, in px from its top-left corner,
+// for a window w x h: the embed centres the place in the oversized frame.
+export const mapPin = (w: number, h: number) => ({ x: (w - CROP.left) / 2, y: (h - CROP.top + CROP.bottom) / 2 });
 
 // Toned toward ink on cotton, then multiplied with the card's own texture so
 // the map's white becomes the paper.
@@ -36,7 +39,9 @@ const ring: CSSProperties = {
   WebkitMaskComposite: "xor",
 };
 
-export function VenueMap() {
+// `revealed` false keeps the map hidden (it still loads) while something else
+// fills the window: `children` sit inside it, over the map.
+export function VenueMap({ revealed = true, children }: { revealed?: boolean; children?: ReactNode }) {
   const { venue } = EVENT;
   const reduce = useReducedMotion();
   const [loaded, setLoaded] = useState(false);
@@ -66,7 +71,7 @@ export function VenueMap() {
               className="block size-full border-0"
               style={{ filter: TONE }}
               initial={{ opacity: 0 }}
-              animate={{ opacity: loaded ? 1 : 0 }}
+              animate={{ opacity: loaded && revealed ? 1 : 0 }}
               transition={{ duration: reduce ? 0 : 1.1, ease: [0.22, 0, 0.1, 1] }}
             />
           </div>
@@ -80,6 +85,7 @@ export function VenueMap() {
               mixBlendMode: "multiply",
             }}
           />
+          {children}
           <div
             aria-hidden
             className="absolute inset-0 pointer-events-none"
@@ -92,19 +98,26 @@ export function VenueMap() {
 
         {/* a tap target for the whole window; keyboards and screen readers use
             the button below, which goes to the same place */}
-        <a
-          href={venue.mapsUrl}
-          target="_blank"
-          rel="noopener"
-          tabIndex={-1}
-          aria-hidden
-          className="absolute inset-0"
-          style={{ borderRadius: innerRadius }}
-        />
+        {revealed && (
+          <a
+            href={venue.mapsUrl}
+            target="_blank"
+            rel="noopener"
+            tabIndex={-1}
+            aria-hidden
+            className="absolute inset-0"
+            style={{ borderRadius: innerRadius }}
+          />
+        )}
       </div>
-      <p className="absolute right-[2.4cqw] top-full mt-[0.6cqw] font-serif italic text-[3.2cqw] leading-none text-ink-mid">
+      <motion.p
+        className="absolute right-[2.4cqw] top-full mt-[0.6cqw] font-serif italic text-[3.2cqw] leading-none text-ink-mid"
+        initial={false}
+        animate={{ opacity: revealed ? 1 : 0 }}
+        transition={{ duration: reduce ? 0 : 0.8 }}
+      >
         {EVENT.copy.venue.mapCredit}
-      </p>
+      </motion.p>
     </div>
   );
 }
