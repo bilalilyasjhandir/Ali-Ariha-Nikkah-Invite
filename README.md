@@ -104,10 +104,14 @@ sit on the right on laptops.
 2. Save the date — scratch card that reveals the date
 3. Countdown, with add-to-calendar
 4. The day's schedule
-5. Venue, with the Google Maps location
+5. Venue — a closed gatefold the guest taps open, then the Google Maps location
 6. A gentle request (no boxed gifts)
 7. RSVP
 8. Closing note
+
+Both reveals (the date and the venue) end in a shower of the couple's blossoms,
+pale silk ribbons and silver glints (`src/components/celebration/`). Call
+`celebrate(x, y)` from anywhere to play it from that point on screen.
 
 Every card is the same photoreal cotton card (`src/components/paper/Paper.tsx`)
 with content laid out in `cqw` so it scales with the card. **All wording and

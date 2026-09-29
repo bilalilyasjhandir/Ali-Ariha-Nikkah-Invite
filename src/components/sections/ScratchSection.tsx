@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useRef, useState, type ReactNode } from "react";
 import { EVENT } from "@/lib/event";
+import { celebrate } from "../celebration/Celebration";
 import { IMG, SIZE } from "../opening/geometry";
 import { BLOOMS, Paper } from "../paper/Paper";
 import { FOIL, FOIL_EDGE, FoilMonogram, FoilRule, PRESS } from "../paper/foil";
@@ -86,6 +87,9 @@ export function ScratchSection() {
     setUnit((patchRef.current?.offsetWidth ?? 0) / PATCH.w);
     setRevealedNow(via);
     if (navigator.userActivation?.hasBeenActive ?? true) navigator.vibrate?.(10);
+    // a beat after the foil gives, the shower blooms from the date
+    const r = dateRef.current?.getBoundingClientRect();
+    if (r) window.setTimeout(() => celebrate(r.left + r.width / 2, r.top + r.height * 0.55), 160);
     if (via === "button") dateRef.current?.focus({ preventScroll: true });
   };
 

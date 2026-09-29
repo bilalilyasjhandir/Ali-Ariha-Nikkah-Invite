@@ -15,9 +15,10 @@ const FOIL_DOWN = "linear-gradient(180deg, #8c959e, #b9c0c6 24%, #79828b 50%, #a
 // A silver thread hangs from the title and draws down the card: it reaches
 // each item's node, the node lands, the item rises under it, and the thread
 // carries on to the next. All transform strings, so it runs on the compositor.
+// Five stops share one card, so each thread is short and the step brisk.
 const BASE = 0.45;
-const STEP = 0.78;
-const DRAW = 0.5;
+const STEP = 0.56;
+const DRAW = 0.36;
 const at = (i: number) => BASE + i * STEP;
 
 const draw: Variants = {
@@ -53,7 +54,7 @@ function Timeline() {
             aria-hidden
             custom={i}
             variants={draw}
-            className="mb-[1.5cqw] mt-[2.4cqw] block h-[6.5cqw] w-px origin-top"
+            className="mb-[1.1cqw] mt-[1.4cqw] block h-[3.4cqw] w-px origin-top"
             style={{ background: FOIL_DOWN }}
           />
           <motion.span
@@ -63,17 +64,17 @@ function Timeline() {
             className="block size-[1.5cqw]"
             style={{ background: FOIL }}
           />
-          <motion.div custom={i} variants={rise} className="mt-[2.6cqw]">
-            <p className="font-serif text-[6.8cqw] leading-[1.1] text-ink" style={PRESS}>
+          <motion.div custom={i} variants={rise} className="mt-[1.6cqw]">
+            <p className="font-serif text-[5.9cqw] leading-[1.1] text-ink" style={PRESS}>
               <span className="[font-variant-numeric:lining-nums_tabular-nums]">{item.time}</span>
-              <span className="ml-[1.4cqw] font-sans text-[3.4cqw] uppercase tracking-[0.16em] text-ink-mid">
+              <span className="ml-[1.3cqw] font-sans text-[3.1cqw] uppercase tracking-[0.16em] text-ink-mid">
                 {item.period}
               </span>
             </p>
-            <h3 className="mt-[0.8cqw] font-serif font-medium text-[5.6cqw] leading-[1.3] text-ink" style={PRESS}>
+            <h3 className="mt-[0.3cqw] font-serif font-medium text-[5cqw] leading-[1.25] text-ink" style={PRESS}>
               {item.title}
             </h3>
-            <p className="mt-[0.6cqw] font-serif italic text-[4.6cqw] leading-[1.4] text-ink-mid [text-wrap:balance]">
+            <p className="mt-[0.2cqw] font-serif italic text-[4.1cqw] leading-[1.35] text-ink-mid [text-wrap:balance]">
               {item.detail}
             </p>
           </motion.div>
@@ -86,7 +87,7 @@ function Timeline() {
 export function TimelineSection() {
   return (
     <Section id="schedule" label="The day's schedule" tilt={-0.6}>
-      <Paper blooms={BLOOMS.topRight}>
+      <Paper blooms={BLOOMS.topRightTucked}>
         <MotionConfig reducedMotion="user">
           <div className="absolute inset-[9.5cqw] flex flex-col items-center justify-center text-center">
             <Reveal className="flex flex-col items-center">
@@ -94,7 +95,7 @@ export function TimelineSection() {
                 <ScriptTitle className="[text-wrap:balance]">{EVENT.copy.schedule.title}</ScriptTitle>
               </RevealItem>
             </Reveal>
-            <div className="mt-[1.5cqw] w-full">
+            <div className="mt-[0.8cqw] w-full">
               <Timeline />
             </div>
           </div>

@@ -17,6 +17,8 @@ export const BLOOMS = {
   ],
   topLeft: [{ w: 34, side: "left", x: -11, end: "top", y: -10, rotate: -24 }],
   topRight: [{ w: 33, side: "right", x: -11, end: "top", y: -10, rotate: 22 }],
+  // smaller and further off the corner, for a card whose title runs wide
+  topRightTucked: [{ w: 27, side: "right", x: -10.5, end: "top", y: -10, rotate: 22 }],
   bottomLeft: [{ w: 36, side: "left", x: -11, end: "bottom", y: -10, rotate: -148 }],
   bottomRight: [{ w: 36, side: "right", x: -11, end: "bottom", y: -10, rotate: 150 }],
   diagonal: [

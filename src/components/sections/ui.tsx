@@ -14,9 +14,9 @@ export function Eyebrow({ children, className = "" }: { children: ReactNode; cla
 }
 
 // the couple's copperplate, for section titles
-export function ScriptTitle({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function ScriptTitle({ children, className = "", ...rest }: ComponentProps<"h2">) {
   return (
-    <h2 className={`font-script text-[10.5cqw] leading-[1.2] text-ink ${className}`} style={PRESS}>
+    <h2 {...rest} className={`font-script text-[10.5cqw] leading-[1.2] text-ink ${className}`} style={PRESS}>
       {children}
     </h2>
   );

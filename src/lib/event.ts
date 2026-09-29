@@ -31,6 +31,8 @@ export const EVENT = {
     { time: "12:00", period: "PM", title: "Guest Arrival", detail: "Drinks and snacks will be served" },
     { time: "12:30", period: "PM", title: "Nikkah", detail: "The nikkah ceremony will begin" },
     { time: "1:00", period: "PM", title: "Lunch", detail: "Guests will be requested to take their seats as lunch is served" },
+    { time: "1:30", period: "PM", title: "Rings Exchange", detail: "The couple will exchange the rings" },
+    { time: "1:45", period: "PM", title: "Cake Cutting", detail: "Tea and cake will be served" },
   ],
 
   copy: {
@@ -44,11 +46,11 @@ export const EVENT = {
       after: "Thank you for celebrating with us",
     },
     schedule: { title: "The Day's Schedule" },
-    venue: { eyebrow: "The Venue", button: "See On Google Maps", mapCredit: "Map data © Google" },
+    venue: { eyebrow: "The Venue", prompt: "Tap to open", button: "See On Google Maps", mapCredit: "Map data © Google" },
     // not on the draft card — the couple asked simply for a note about boxed gifts
     gift: {
       eyebrow: "A Gentle Request",
-      body: "Your blessings mean the world to us. We kindly request that you do not bring boxed gifts.",
+      body: "We would be delighted simply to have you celebrate with us. Kindly, no boxed gifts.",
     },
     rsvp: {
       title: "Will You Join Us?",
@@ -67,7 +69,7 @@ export const EVENT = {
       thanksDecline: "Thank you for letting us know. You will be missed.",
     },
     closing: {
-      body: "Your presence is the most precious gift we could ask for. We humbly request the honour of your company as we begin this beautiful journey together.",
+      body: "Your blessings mean the world to us. We humbly request the honour of your company as we begin this beautiful journey together.",
       signoff: "Awaiting your gracious presence",
       again: "View the invitation again",
     },
